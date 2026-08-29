@@ -6,11 +6,15 @@ Runs with:  cd xinmo && python -m uvicorn server:app --port 8092
 """
 import json
 import os
+import re
 import sqlite3
 import hashlib
 import io
 import zipfile
 import time
+import base64
+import urllib.request
+import urllib.error
 from pathlib import Path
 
 from fastapi import FastAPI, Request, UploadFile, File, Form
@@ -235,12 +239,161 @@ async def upload(file: UploadFile = File(...), pid: str = Form('tmp'), kind: str
     return JSONResponse({'ok': True, 'path': web_path, 'bytes': len(data)})
 
 
-# ---------- classify (D1: fixed value; D2+ would call LLM) ----------
+# ---------- vision classify (v1.1: LLM vision suggests topic candidates) ----------
+VISION_TIMEOUT = 3.0
+CLASSIFY_FALLBACK = {'ok': True, 'subject': '', 'topic_ids': [], 'summary': '', 'candidates': []}
+
+
+def _local_image_path(image_path):
+    """Resolve a web path like /images/2026-08/xxx.jpg to a local file path."""
+    if not image_path:
+        return None
+    rel = image_path.replace('/images/', '', 1) if image_path.startswith('/images/') else image_path
+    p = IMAGES / rel
+    return p if p.exists() else None
+
+
+def _extract_json(text):
+    """Pull a JSON object out of model text (strips markdown fences / prose)."""
+    if not text:
+        return None
+    m = re.search(r'\{.*\}', text, re.S)
+    if not m:
+        return None
+    blob = m.group(0)
+    try:
+        return json.loads(blob)
+    except Exception:
+        return None
+
+
+def vision_chat(cfg, prompt, image_path=None, timeout=VISION_TIMEOUT):
+    """Call the vision channel with an optional image (base64 data URL). Returns raw text or None."""
+    base_url = (cfg.get('base_url') or '').rstrip('/')
+    api_key = cfg.get('api_key') or ''
+    model = cfg.get('model') or ''
+    if not (base_url and api_key and model):
+        return None
+    content = [{'type': 'text', 'text': prompt}]
+    local = _local_image_path(image_path)
+    if local:
+        with open(local, 'rb') as f:
+            b64 = base64.b64encode(f.read()).decode('ascii')
+        content.append({'type': 'image_url', 'image_url': {'url': 'data:image/jpeg;base64,' + b64}})
+    body = {
+        'model': model,
+        'messages': [{'role': 'user', 'content': content}],
+        'max_tokens': 600,
+        'temperature': 0,
+    }
+    req = urllib.request.Request(base_url + '/chat/completions',
+                                 data=json.dumps(body).encode('utf-8'), method='POST')
+    req.add_header('Content-Type', 'application/json')
+    req.add_header('Authorization', 'Bearer ' + api_key)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode('utf-8', 'replace')
+        j = json.loads(raw)
+        return (j['choices'][0]['message'].get('content') or '').strip()
+    except Exception:
+        return None
+
+
+def _topic_catalog():
+    """Compact map subject -> list of (id,label) for the vision prompt."""
+    cat = {}
+    td = load_topics()
+    for subj in SUBJECTS:
+        pairs = []
+        for ch in (td.get(subj) or {}).get('chapters') or []:
+            for tp in ch.get('topics') or []:
+                pairs.append('%s:%s' % (tp['id'], tp['label']))
+        cat[subj] = pairs
+    return cat
+
+
+def _topic_label_by_id(subj, tid):
+    td = load_topics()
+    for ch in (td.get(subj) or {}).get('chapters') or []:
+        for tp in ch.get('topics') or []:
+            if tp['id'] == tid:
+                return tp['label']
+    return tid
+
+
+def classify_image(image_path):
+    """Vision classify one question image -> {subject, topic_ids, summary}.
+    On any failure / timeout / invalid ids -> returns unclassified fallback."""
+    cfg = load_config().get('vision', {})
+    if not (cfg.get('base_url') and cfg.get('api_key') and cfg.get('model')):
+        return dict(CLASSIFY_FALLBACK)
+    cat = _topic_catalog()
+    id2label = {}
+    for subj, pairs in cat.items():
+        for p in pairs:
+            if ':' in p:
+                pid, plabel = p.split(':', 1)
+                id2label[pid] = plabel
+    prompt = (
+        'You are a Chinese high-school exam helper. Look at the question image and '
+        'classify it into a subject and up to 3 knowledge-point topics. '
+        'Subject id and its available topic ids: %s. '
+        'Reply with ONLY a JSON object (no markdown): '
+        '{"subject":"<subject code>","topic_ids":["<id1>","<id2>","<id3>"],"summary":"<one-line Chinese 考点摘要>"}. '
+        'Pick topic_ids ONLY from the given ids (they must exist). summary must be one short sentence.'
+        % json.dumps(cat, ensure_ascii=False)
+    )
+    text = vision_chat(cfg, prompt, image_path)
+    obj = _extract_json(text) or {}
+    subject = obj.get('subject') or ''
+    if subject not in SUBJECTS:
+        subject = ''
+    ids = obj.get('topic_ids') or []
+    ids = [x for x in ids if x in id2label]
+    return {
+        'ok': True,
+        'subject': subject,
+        'topic_ids': ids[:3],
+        'summary': (obj.get('summary') or '')[:80],
+    }
+
+
 @app.post('/api/classify')
 async def classify(payload: dict):
-    # v1.1: knowledge point classification is manual (two-level pick from topics.json).
-    # LLM classify is deferred to v2. Return a fixed fallback; the UI does the picking.
-    return JSONResponse({'topic': 'other', 'topic_label': LABELS.get('classify_topic_label', 'other'), 'error_type': 'concept', 'hint': ''})
+    # v1.1: LLM vision classification of the question image -> 3 candidate topics.
+    # On failure/timeout, return the unclassified fallback so submission never blocks.
+    image_path = payload.get('image_path') or ''
+    return JSONResponse(classify_image(image_path))
+
+
+@app.post('/api/reclassify')
+async def reclassify(payload: dict):
+    # v1.1: batch-backfill problems whose topic is 'unclassified'.
+    ids = payload.get('ids') or []
+    conn = get_db()
+    results = []
+    for pid in ids:
+        row = conn.execute('SELECT * FROM problem WHERE id=?', (pid,)).fetchone()
+        if row is None:
+            results.append({'id': pid, 'ok': False, 'error': 'no such problem'})
+            continue
+        if row['topic'] != 'unclassified':
+            results.append({'id': pid, 'ok': True, 'unchanged': True})
+            continue
+        c = classify_image(row['image_path'])
+        if c.get('subject') and c.get('topic_ids'):
+            subj = c['subject']
+            tid = c['topic_ids'][0]
+            label = _topic_label_by_id(subj, tid)
+            conn.execute('UPDATE problem SET subject=?, topic=?, topic_label=? WHERE id=?',
+                         (subj, tid, label, pid))
+            _append_problem_jsonl(conn.execute('SELECT * FROM problem WHERE id=?', (pid,)).fetchone())
+            results.append({'id': pid, 'ok': True, 'subject': subj, 'topic': tid, 'topic_label': label})
+        else:
+            results.append({'id': pid, 'ok': True, 'unchanged': True, 'error': 'classify_failed'})
+    conn.commit()
+    conn.close()
+    return JSONResponse({'ok': True, 'results': results})
 
 
 def _append_problem_jsonl(row):
