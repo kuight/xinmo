@@ -98,3 +98,20 @@ img.thumb{max-width:120px;max-height:90px;border-radius:6px;border:1px solid #dd
 .err-name{font-size:14px;color:#334}
 .err-val{font-size:18px;font-weight:bold;color:#1d5fd6}
 .daily-chart{width:100%;max-width:700px;height:auto;background:#fafcff;border:1px solid #e3e8f0;border-radius:8px}
+
+/* v1.1: image picker + crop + vision candidates */
+.ghost{background:#fff;color:#1d5fd6;border:1px solid #c9d3e3;border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer}
+.ghost:hover{background:#eef4ff}
+.img-buttons{display:flex;gap:8px;margin-top:6px}
+.img-buttons .ghost{flex:1}
+.cand-chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+.cand-chip{background:#e8f1ff;color:#0b57c9;border:1px solid #bfd7f5;border-radius:16px;padding:8px 14px;font-size:14px;cursor:pointer}
+.cand-chip:hover{background:#d6e7ff}
+.cand-other,.cand-unc{margin-top:8px;margin-right:6px}
+.crop-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;z-index:300;flex-direction:column;padding:12px}
+.crop-box{background:#fff;border-radius:12px;padding:12px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;gap:8px}
+.crop-stage{position:relative;overflow:hidden;max-width:92vw;max-height:70vh;background:#111}
+.crop-stage img{display:block}
+.crop-rect{position:absolute;border:2px solid #1d5fd6;background:rgba(29,95,214,.15);box-sizing:border-box;cursor:move}
+.crop-handle{position:absolute;width:14px;height:14px;background:#1d5fd6;border:2px solid #fff;border-radius:3px;cursor:nwse-resize}
+.crop-bar{display:flex;gap:10px;justify-content:flex-end}
