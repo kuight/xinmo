@@ -60,9 +60,10 @@ def _load_labels():
         return {}
 LABELS = _load_labels()
 SUBJECT_LABEL = LABELS.get('subject', {})
-QUESTION_TYPES = ['choice', 'numeric', 'expression', 'openended']
-ERROR_TYPES = ['concept', 'formula', 'calc', 'reading']
+QUESTION_TYPES = ['choice', 'fill', 'calc', 'experiment', 'inference', 'diagram', 'short', 'comprehensive']
+ERROR_TYPES = ['concept', 'formula', 'calc', 'reading', 'stuck', 'incomplete', 'timeout', 'careless']
 ERROR_LABEL = LABELS.get('error', {})
+QUESTION_TYPE_LABEL = LABELS.get('question_type', {})
 
 
 def get_db():
@@ -124,6 +125,7 @@ def problem_row_to_dict(r):
         'error_type': r['error_type'],
         'error_label': ERROR_LABEL.get(r['error_type'], r['error_type']),
         'question_type': r['question_type'],
+        'question_type_label': QUESTION_TYPE_LABEL.get(r['question_type'], r['question_type']),
         'note': r['note'],
         'answer_text': r['answer_text'],
         'image_path': r['image_path'],
@@ -261,12 +263,14 @@ async def create_problem(payload: dict):
     subject = payload.get('subject', '')
     topic = payload.get('topic', '')
     topic_label = payload.get('topic_label', '')
-    error_type = payload.get('error_type', 'concept')
-    question_type = payload.get('question_type', 'openended')
-    if question_type not in QUESTION_TYPES:
-        question_type = 'openended'
-    if error_type not in ERROR_TYPES:
+    error_type = payload.get('error_type') or 'concept'
+    question_type = payload.get('question_type') or 'openended'
+    # v1.1: allow custom free-text error/type values (not in the built-in lists);
+    # only blank defaults are coerced to the fallback.
+    if not (error_type or '').strip():
         error_type = 'concept'
+    if not (question_type or '').strip():
+        question_type = 'openended'
     note = payload.get('note') or ''
     answer_text = payload.get('answer_text') or ''
     image_path = payload.get('image_path') or ''

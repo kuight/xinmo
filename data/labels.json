@@ -11,7 +11,21 @@
     "concept": "概念不会",
     "formula": "公式记错",
     "calc": "计算失误",
-    "reading": "审题错"
+    "reading": "审题错",
+    "stuck": "思路卡住",
+    "incomplete": "步骤不全",
+    "timeout": "时间不够",
+    "careless": "粗心笔误"
   },
-  "classify_topic_label": "未分类"
+  "classify_topic_label": "未分类",
+  "question_type": {
+    "choice": "选择题",
+    "fill": "填空题",
+    "calc": "计算题",
+    "experiment": "实验题",
+    "inference": "推断题",
+    "diagram": "作图题",
+    "short": "简答题",
+    "comprehensive": "综合题"
+  }
 }

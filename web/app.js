@@ -4,8 +4,8 @@
 var I18N = {};
 
 var SUBJ = ['physics','chemistry','geography','chinese','math','english'];
-var QTYPE = ['choice','numeric','expression','openended'];
-var ETYPE = ['concept','formula','calc','reading'];
+var QTYPE = ['choice','fill','calc','experiment','inference','diagram','short','comprehensive'];
+var ETYPE = ['concept','formula','calc','reading','stuck','incomplete','timeout','careless'];
 var TOPICS = null;
 var selSubj = null, selTopic = null;
 var tab = 'entry';
@@ -116,10 +116,8 @@ function buildEntryForm(p){
   g.appendChild(s1);
   var s2=el('div');
   s2.appendChild(el('label',null,t('entry.qtypeLabel')));
-  var qt=el('select');
-  QTYPE.forEach(function(q){var o=el('option',null,t('questionTypes.'+q,q));o.value=q;qt.appendChild(o);});
-  s2.appendChild(qt);
-  g.appendChild(s2);
+  var qt=customSelect(QTYPE,'questionTypes','entry.qtypeCustom');
+  s2.appendChild(qt);g.appendChild(s2);
   form.appendChild(g);
 
   form.appendChild(makeDropzone('q','entry.qImageLabel'));
@@ -130,8 +128,7 @@ function buildEntryForm(p){
   form.appendChild(makeDropzone('a','entry.aImageLabel'));
 
   form.appendChild(el('label',null,t('entry.errorLabel')));
-  var et=el('select');
-  ETYPE.forEach(function(e){var o=el('option',null,t('errorTypes.'+e,e));o.value=e;et.appendChild(o);});
+  var et=customSelect(ETYPE,'errorTypes','entry.errorCustom');
   form.appendChild(et);
 
   var sub=el('button','primary',t('entry.submit'));
@@ -139,7 +136,7 @@ function buildEntryForm(p){
     if(!selSubj){toast(t('entry.noSubject'));return;}
     if(!selTopic){toast(t('entry.noTopic'));return;}
     if(!entryImg.q){toast(t('entry.needImage'));return;}
-    var body={subject:selSubj,topic:selTopic,topic_label:(topicLabel(selSubj,selTopic)||''),question_type:qt.value,error_type:et.value,note:note.value,source:src.value,answer_text:ans.value,image_path:entryImg.q,answer_image_path:entryImg.a};
+    var body={subject:selSubj,topic:selTopic,topic_label:(topicLabel(selSubj,selTopic)||''),question_type:selValue(qt),error_type:selValue(et),note:note.value,source:src.value,answer_text:ans.value,image_path:entryImg.q,answer_image_path:entryImg.a};
     fetch('/api/problem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
       .then(function(r){return r.json();}).then(function(d){
         if(d.ok){toast(t('entry.added')+' #'+d.problem.id);note.value='';ans.value='';src.value='';selTopic=null;entryImg={q:'',a:''};renderEntry();}
@@ -147,6 +144,24 @@ function buildEntryForm(p){
   };
   form.appendChild(sub);
   p.appendChild(form);
+}
+// custom-select: built-in options + a "自定义" option that reveals a text field
+function customSelect(values,i18nPrefix,customKey){
+  var wrap=el('div');
+  var sel=el('select');
+  values.forEach(function(v){var o=el('option',null,t(i18nPrefix+'.'+v,v));o.value=v;sel.appendChild(o);});
+  var cust=el('option',null,t(customKey));cust.value='__custom__';sel.appendChild(cust);
+  var customWrap=el('div');customWrap.style.display='none';
+  var custInp=el('input');custInp.type='text';custInp.placeholder=t('entry.customLabel');customWrap.appendChild(custInp);
+  sel.onchange=function(){customWrap.style.display=(sel.value==='__custom__')?'block':'none';};
+  wrap.appendChild(sel);wrap.appendChild(customWrap);
+  return wrap;
+}
+function selValue(wrap){
+  var sel=wrap.querySelector('select');
+  if(sel.value!=='__custom__')return sel.value;
+  var inp=wrap.querySelector('input');
+  return (inp.value||'').trim()||sel.value;
 }
 
 function topicLabel(subj,topicId){

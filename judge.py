@@ -108,15 +108,26 @@ def judge_expression(my, std, cfg):
 
 
 def judge(question_type, my_answer, std_answer, cfg=None):
-    """Dispatch by question_type. Empty std answer or openended -> unknown."""
+    """Dispatch by question_type. Empty std answer or open-ended -> unknown.
+
+    v1.1: question_type is one of the 8 UI types; we map to an internal judging
+    behavior. 'choice' compares letters; 'fill'/'calc' compare numbers (fallback
+    unknown for text fill answers); everything else is open-ended (LLM/self).
+    A custom free-text type falls back to open-ended.
+    """
     qt = question_type or 'openended'
     std = std_answer or ''
-    if qt == 'openended' or not std.strip():
-        return {'judged': 'unknown', 'reason': 'openended_or_no_std'}
     if qt == 'choice':
         return judge_choice(my_answer or '', std)
-    if qt == 'numeric':
+    if qt in ('fill', 'calc', 'numeric'):
+        if not std.strip():
+            return {'judged': 'unknown', 'reason': 'no_std_answer'}
         return judge_numeric(my_answer or '', std)
     if qt == 'expression':
         return judge_expression(my_answer or '', std, cfg or {})
-    return {'judged': 'unknown', 'reason': 'unknown_type'}
+    # open-ended-like types (experiment/inference/diagram/short/comprehensive/custom/openended)
+    if not (my_answer or '').strip():
+        return {'judged': 'unknown', 'reason': 'empty_input'}
+    if not std.strip():
+        return {'judged': 'unknown', 'reason': 'openended_or_no_std'}
+    return {'judged': 'unknown', 'reason': 'openended_or_no_std'}

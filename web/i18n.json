@@ -18,26 +18,42 @@
     "concept": "概念不会",
     "formula": "公式记错",
     "calc": "计算失误",
-    "reading": "审题错"
+    "reading": "审题错",
+    "stuck": "思路卡住",
+    "incomplete": "步骤不全",
+    "timeout": "时间不够",
+    "careless": "粗心笔误"
   },
   "questionTypes": {
     "choice": "选择题",
-    "numeric": "计算题",
-    "expression": "表达式/公式",
-    "openended": "问答题"
+    "fill": "填空题",
+    "calc": "计算题",
+    "experiment": "实验题",
+    "inference": "推断题",
+    "diagram": "作图题",
+    "short": "简答题",
+    "comprehensive": "综合题"
   },
   "entry": {
     "pickSubject": "1 选学科",
     "pickTopic": "2 选知识点（先点章节再点知识点）",
     "topicPlaceholder": "点选知识点…",
-    "noteLabel": "这题考什么，你为什么错（一句话）",
-    "notePlaceholder": "例：电势与场强关系混淆",
+    "autoClassifying": "正在识别图中知识点…",
+    "candidatesTitle": "识别得到的候选知识点，请点选",
+    "candidateOther": "其他（自己选）",
+    "candidateUnclassified": "待分类（先交）",
+    "unclassifiedLabel": "待分类",
+    "noteLabel": "我的批注（可选）",
+    "notePlaceholder": "例：电势与场强关系混淆（已自动填入识别摘要，可修改）",
     "sourceLabel": "来源（可选）",
     "sourcePlaceholder": "例：0828物理月考T14",
     "answerLabel": "标准答案（可选，重做时判定用）",
     "answerPlaceholder": "选择题填选项，如 B；计算题填最终结果含单位",
     "qtypeLabel": "题型",
+    "qtypeCustom": "自定义…",
     "errorLabel": "错因",
+    "errorCustom": "自定义…",
+    "customLabel": "自定义文本",
     "submit": "入库",
     "emptyNote": "请先输入错误说明",
     "noSubject": "请先选学科",
@@ -49,7 +65,13 @@
     "uploading": "上传中…",
     "uploadFailed": "图片上传失败",
     "removeImage": "移除",
-    "needImage": "请先贴题目图片"
+    "needImage": "请先贴题目图片",
+    "takePhoto": "拍照",
+    "chooseAlbum": "从相册选择",
+    "cropTitle": "裁剪图片",
+    "cropConfirm": "确定裁剪",
+    "cropCancel": "取消",
+    "classifyFailed": "识别失败，已设为待分类"
   },
   "today": {
     "title": "今日心魔",
@@ -70,6 +92,7 @@
     "btnJudge": "提交判定",
     "verdictCorrect": "判定：正确",
     "verdictWrong": "判定：错误",
+    "verdictPartial": "判定：部分对",
     "verdictUnknown": "无法自动判定，请自评",
     "stdAnswer": "标准答案",
     "noStdAnswer": "（未填标准答案）",
@@ -82,7 +105,13 @@
     "btnConfirmWrong": "记下，排回今天再练",
     "selfCorrect": "我做对了",
     "selfWrong": "我做错了",
-    "reveal": "查看答案/判定"
+    "reveal": "查看答案/判定",
+    "btnEasy": "轻松",
+    "explainWhereWrong": "错在哪一步",
+    "explainNextStep": "下次第一步该看什么",
+    "explainAdvice": "优化建议",
+    "explainPrompt": "下面是解说，看完再评价自己这次的表现",
+    "explainRetry": "识别失败，以下仅供自评"
   },
   "trace": {
     "todayTitle": "今日足迹",
@@ -93,6 +122,7 @@
     "heatTitle": "修行热力图",
     "summaryTpl": "%s：%d个知识点 已遇%d 已炼化%d",
     "activeTpl": "活跃%d",
+    "chapterSeenTpl": "已遇 %d / 共 %d",
     "streakTpl": "连续修行 %d 天",
     "noStreak": "今天开个头吧",
     "resultAgain": "又错了",
@@ -116,8 +146,6 @@
       "3": "元婴"
     },
     "loadFailed": "统计加载失败",
-    "errorTitle": "错因分布",
-    "dailyTitle": "近14天 录入/重做",
     "legendAdded": "录入",
     "legendRedone": "重做"
   }
