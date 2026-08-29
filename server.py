@@ -268,22 +268,25 @@ def _extract_json(text):
 
 
 def vision_chat(cfg, prompt, image_path=None, timeout=VISION_TIMEOUT):
-    """Call the vision channel with an optional image (base64 data URL). Returns raw text or None."""
+    """Call the vision channel with optional image(s) (base64 data URL). Returns raw text or None.
+    image_path may be a single path/None or a list of paths; each is read & embedded."""
     base_url = (cfg.get('base_url') or '').rstrip('/')
     api_key = cfg.get('api_key') or ''
     model = cfg.get('model') or ''
     if not (base_url and api_key and model):
         return None
     content = [{'type': 'text', 'text': prompt}]
-    local = _local_image_path(image_path)
-    if local:
-        with open(local, 'rb') as f:
-            b64 = base64.b64encode(f.read()).decode('ascii')
-        content.append({'type': 'image_url', 'image_url': {'url': 'data:image/jpeg;base64,' + b64}})
+    paths = image_path if isinstance(image_path, (list, tuple)) else ([image_path] if image_path else [])
+    for p in paths:
+        local = _local_image_path(p)
+        if local:
+            with open(local, 'rb') as f:
+                b64 = base64.b64encode(f.read()).decode('ascii')
+            content.append({'type': 'image_url', 'image_url': {'url': 'data:image/jpeg;base64,' + b64}})
     body = {
         'model': model,
         'messages': [{'role': 'user', 'content': content}],
-        'max_tokens': 600,
+        'max_tokens': 700,
         'temperature': 0,
     }
     req = urllib.request.Request(base_url + '/chat/completions',
@@ -355,6 +358,37 @@ def classify_image(image_path):
         'subject': subject,
         'topic_ids': ids[:3],
         'summary': (obj.get('summary') or '')[:80],
+    }
+
+
+def explain_answer(row, my_answer):
+    """Vision-based rework explanation (item 3). Returns None if vision unavailable/fails.
+    Uses question image + std answer text + answer image + user answer to produce:
+    {verdict, wrong_step, next_step, advice}."""
+    cfg = load_config().get('vision', {})
+    if not (cfg.get('base_url') and cfg.get('api_key') and cfg.get('model')):
+        return None
+    imgs = [row['image_path']]
+    if row.get('answer_image_path'):
+        imgs.append(row['answer_image_path'])
+    prompt = (
+        'You are a patient Chinese high-school teacher. A student solved a problem whose question is in the '
+        'image(s). The student answer and standard answer are below. Judge the student answer as correct, '
+        'wrong, or partial. Reply with ONLY a JSON object (no markdown): '
+        '{"verdict":"correct|wrong|partial","wrong_step":"<if wrong/partial, which step went wrong - Chinese>",'
+        '"next_step":"<the very first thing to look at next time - Chinese>","advice":"<one-line optimization suggestion - Chinese>"}. '
+        'STUDENT ANSWER: %s. STANDARD ANSWER: %s' % (my_answer or '', row['answer_text'] or '')
+    )
+    text = vision_chat(cfg, prompt, imgs)
+    obj = _extract_json(text) or {}
+    verdict = obj.get('verdict')
+    if verdict not in ('correct', 'wrong', 'partial'):
+        return None
+    return {
+        'verdict': verdict,
+        'wrong_step': (obj.get('wrong_step') or '')[:120],
+        'next_step': (obj.get('next_step') or '')[:120],
+        'advice': (obj.get('advice') or '')[:120],
     }
 
 
@@ -494,14 +528,20 @@ async def judge_answer(payload: dict):
         return JSONResponse({'ok': False, 'error': 'no such problem'}, status_code=404)
     cfg = load_config().get('text', {})
     verdict = jdg.judge(row['question_type'], my_answer, row['answer_text'], cfg)
+    # v1.1 item 3: vision-based explanation; degrade to pure judge if vision unavailable
+    expl = explain_answer(row, my_answer)
+    judged = verdict['judged']  # correct|wrong|unknown
+    if expl is not None:
+        judged = expl['verdict']  # correct|wrong|partial
     return JSONResponse({
         'ok': True,
-        'judged': verdict['judged'],           # correct|wrong|unknown
+        'judged': judged,           # correct|wrong|partial|unknown
         'reason': verdict.get('reason', ''),
         'hint': verdict.get('hint', ''),
         'question_type': row['question_type'],
         'answer_text': row['answer_text'] or '',
         'answer_image_path': row['answer_image_path'] or '',
+        'explanation': expl,        # None or {verdict,wrong_step,next_step,advice}
     })
 
 

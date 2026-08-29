@@ -375,20 +375,27 @@ function buildReviewCard(item){
       .catch(function(){toast('judge failed');});
   }
 
-  // phase 2: show verdict + std answer + answer image
+  // phase 2: show verdict + std answer + answer image + explanation (item 3), then self-assess
   function renderVerdict(my,v){
     phase.innerHTML='';
-    // std answer + answer image (revealed now)
     var reveal=el('div','reveal-box');
     var std=(v.answer_text&&v.answer_text.trim())?v.answer_text:t('today.noStdAnswer');
     reveal.appendChild(el('div','std-answer','<b>'+t('today.stdAnswer')+'</b>: '+escapeHtml(std)));
     if(v.answer_image_path){reveal.appendChild(imgThumb(v.answer_image_path));}
     if(v.hint==='unit_missing'){reveal.appendChild(el('div','muted',t('today.unitMissingHint')));}
-
+    // explanation shown before the self-assess buttons (item 3)
+    var explBox=null;
+    if(v.explanation){
+      explBox=el('div','expl-box');
+      if(v.explanation.wrong_step){explBox.appendChild(el('div','expl-row','<b>'+t('today.explainWhereWrong')+':</b> '+escapeHtml(v.explanation.wrong_step)));}
+      if(v.explanation.next_step){explBox.appendChild(el('div','expl-row','<b>'+t('today.explainNextStep')+':</b> '+escapeHtml(v.explanation.next_step)));}
+      if(v.explanation.advice){explBox.appendChild(el('div','expl-row adv','<b>'+t('today.explainAdvice')+':</b> '+escapeHtml(v.explanation.advice)));}
+      phase.appendChild(el('div','muted',t('today.explainPrompt')));
+    }
     if(v.judged==='correct'){
       phase.appendChild(el('div','verdict ok',t('today.verdictCorrect')));
       phase.appendChild(reveal);
-      // correct -> pick smooth(good) / stuck(hard)
+      if(explBox)phase.appendChild(explBox);
       phase.appendChild(el('div','meta',t('today.afterCorrect')));
       var a1=el('div','actions');
       var g=el('button','good',t('today.btnGood'));g.onclick=function(){commit('good','',my,'correct');};
@@ -398,21 +405,29 @@ function buildReviewCard(item){
       phase.appendChild(el('div','verdict bad',t('today.verdictWrong')));
       phase.appendChild(el('div','meta',t('today.afterWrongTitle')));
       phase.appendChild(reveal);
-      // optional "where wrong" note, then confirm -> again
+      if(explBox)phase.appendChild(explBox);
       phase.appendChild(el('label',null,t('today.wrongNoteLabel')));
       var wn=el('input');wn.type='text';wn.placeholder=t('today.wrongNotePlaceholder');phase.appendChild(wn);
       var a2=el('div','actions');
       var cb=el('button','again',t('today.btnConfirmWrong'));cb.onclick=function(){commit('again',wn.value,my,'wrong');};
       a2.appendChild(cb);phase.appendChild(a2);
-    }else{
-      // unknown -> self-assess
-      var reason=v.reason==='llm_unavailable'?t('today.llmUnavailable'):t('today.verdictUnknown');
-      phase.appendChild(el('div','verdict unk',reason));
+    }else if(v.judged==='partial'){
+      phase.appendChild(el('div','verdict unk',t('today.verdictPartial')));
       phase.appendChild(reveal);
+      if(explBox)phase.appendChild(explBox);
       var a3=el('div','actions');
       var sc=el('button','good',t('today.selfCorrect'));sc.onclick=function(){renderSelfCorrect(my);};
       var sw=el('button','again',t('today.selfWrong'));sw.onclick=function(){renderSelfWrong(my);};
       a3.appendChild(sc);a3.appendChild(sw);phase.appendChild(a3);
+    }else{
+      var reason=v.reason==='llm_unavailable'?t('today.llmUnavailable'):t('today.verdictUnknown');
+      phase.appendChild(el('div','verdict unk',reason));
+      phase.appendChild(reveal);
+      if(explBox)phase.appendChild(explBox);
+      var a4=el('div','actions');
+      var sc4=el('button','good',t('today.selfCorrect'));sc4.onclick=function(){renderSelfCorrect(my);};
+      var sw4=el('button','again',t('today.selfWrong'));sw4.onclick=function(){renderSelfWrong(my);};
+      a4.appendChild(sc4);a4.appendChild(sw4);phase.appendChild(a4);
     }
   }
 
