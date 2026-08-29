@@ -111,7 +111,8 @@
     "explainNextStep": "下次第一步该看什么",
     "explainAdvice": "优化建议",
     "explainPrompt": "下面是解说，看完再评价自己这次的表现",
-    "explainRetry": "识别失败，以下仅供自评"
+    "explainRetry": "识别失败，以下仅供自评",
+    "myNote": "我的批注"
   },
   "trace": {
     "todayTitle": "今日足迹",

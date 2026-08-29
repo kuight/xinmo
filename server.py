@@ -588,17 +588,19 @@ def trace():
     # --- 1. today list: entries created today + attempts today, newest first ---
     items = []
     for r in conn.execute(
-            "SELECT id, topic_label, error_type, created_at FROM problem WHERE substr(created_at,1,10)=?",
+            "SELECT id, topic_label, error_type, source, note, created_at FROM problem WHERE substr(created_at,1,10)=?",
             (today,)).fetchall():
         items.append({'kind': 'add', 'order': r['created_at'], 'topic_label': r['topic_label'],
-                      'error_label': ERROR_LABEL.get(r['error_type'], r['error_type'])})
+                      'error_label': ERROR_LABEL.get(r['error_type'], r['error_type']),
+                      'source': r['source'] or '', 'note': r['note'] or ''})
     for r in conn.execute(
-            "SELECT a.id AS aid, a.ts, a.result, a.judged, p.topic_label, p.error_type "
+            "SELECT a.id AS aid, a.ts, a.result, a.judged, p.topic_label, p.error_type, p.source, p.note "
             "FROM attempt a JOIN problem p ON a.problem_id=p.id WHERE substr(a.ts,1,10)=?",
             (today,)).fetchall():
         items.append({'kind': 'redo', 'order': r['ts'], 'topic_label': r['topic_label'],
                       'result': r['result'], 'judged': r['judged'],
-                      'error_label': ERROR_LABEL.get(r['error_type'], r['error_type'])})
+                      'error_label': ERROR_LABEL.get(r['error_type'], r['error_type']),
+                      'source': r['source'] or '', 'note': r['note'] or ''})
     items.sort(key=lambda x: x['order'], reverse=True)  # newest first (ISO timestamp desc)
 
     # --- 2. knowledge tree: per subject/chapter/topic state ---

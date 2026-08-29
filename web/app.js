@@ -335,12 +335,11 @@ function buildReviewCard(item){
   var card=el('div','card'+(item.kind==='rebound'?' rebound':''));
   var startTs=Date.now();
 
-  // --- header: source + topic (answer hidden) ---
-  var h3=el('h3',null,'');
-  h3.innerHTML=(item.source?t('today.source')+': '+item.source+' &middot; ':'')+item.topic_label;
+  // --- header: title = source else topic_label; note as 批注 line ---
+  var h3=el('h3',null,escapeHtml(item.source||item.topic_label||''));
   card.appendChild(h3);
-  card.appendChild(el('div','meta',t('today.topic')+': '+item.topic_label));
-  if(item.note){card.appendChild(el('div','note',item.note));}
+  if(item.source){card.appendChild(el('div','meta',t('today.topic')+': '+item.topic_label));}
+  if(item.note){card.appendChild(el('div','note','<b>'+t('today.myNote')+':</b> '+escapeHtml(item.note)));}
   // question image only (answer/std hidden until judged)
   if(item.image_path){card.appendChild(imgThumb(item.image_path));}
 
@@ -525,8 +524,10 @@ function renderTraceData(p,d){
     var row=el('div','tl-item');
     var badge=el('span','tl-badge '+(it.kind==='add'?'add':'redo'),it.kind==='add'?t('trace.actAdd'):t('trace.actRedo'));
     row.appendChild(badge);
-    var txt=escapeHtml(it.topic_label)+' <span class="tl-sep">&middot;</span> '+escapeHtml(it.error_label||'');
+    var titleText=it.source||it.topic_label||'';
+    var txt=escapeHtml(titleText)+' <span class="tl-sep">&middot;</span> '+escapeHtml(it.error_label||'');
     row.appendChild(el('span',null,txt));
+    if(it.note){row.appendChild(el('div','tl-note','<b>'+t('today.myNote')+':</b> '+escapeHtml(it.note)));}
     if(it.kind==='redo'&&it.result){
       var rl=el('span','tl-res '+it.result,t('trace.result'+it.result.charAt(0).toUpperCase()+it.result.slice(1)));
       row.appendChild(rl);
