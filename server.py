@@ -369,7 +369,7 @@ def explain_answer(row, my_answer):
     if not (cfg.get('base_url') and cfg.get('api_key') and cfg.get('model')):
         return None
     imgs = [row['image_path']]
-    if row.get('answer_image_path'):
+    if row['answer_image_path']:
         imgs.append(row['answer_image_path'])
     prompt = (
         'You are a patient Chinese high-school teacher. A student solved a problem whose question is in the '
