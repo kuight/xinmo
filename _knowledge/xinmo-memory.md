@@ -54,7 +54,14 @@ POST /api/upload：Pillow 压缩≤1400px/JPEG q82/≤300KB，落盘 data/images
 - `GET /api/trace` today_list + tree + subject_summary + heatmap + streak
 - `GET /api/stats` total/refined/active + by_subject + by_error + daily
 
-## 10. 已知未决事项
+## 10. 历史错题库（D8，2026-08-30 已实现并推送）
+- 新增第5个tab「错题库」：浏览全部错题（含已炼化），按学科/状态/关键词筛选
+- 每条可点「编辑」内联修改任意字段：学科/知识点/错因/题型/批注/答案/来源 + 题目图/答案图（可替换缺失图片，id=1/3）
+- 后端 GET /api/library（返回 image_missing/answer_image_missing 缺失标记）+ POST /api/problem/{id}（更新可编辑字段，写 jsonl 审计）
+- 交接后两项用户决策：①wendao 已停止跟踪 xinmo/（.gitignore + git rm --cached）两仓库彻底分开；②旧题图片缺失(id=1/3)按用户决策保留不管（现可在错题库编辑表单内手工替换）
+
+## 11. 已知未决事项
+
 - 旧题图片 404（数据问题）：id=1/id=3 的图片文件已丢失，无法代码修复，待用户确认删题或不管
 - 本地 10 个 commit 已推 GitHub（origin master+main 均到 0cd3de8，2026-08-30 完成）
 - 若用户在意，可清掉两仓库 .git/config 里的 ghp_ token（会改为每次 push 手动输凭证）
