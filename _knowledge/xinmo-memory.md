@@ -67,6 +67,8 @@ POST /api/upload：Pillow 压缩≤1400px/JPEG q82/≤300KB，落盘 data/images
 - 验证：node 最小 DOM mock 提取 app.js IIFE 主体后，先 loadTopics 再跑 buildLibraryCard+openEditForm 对 7 条真实 API 数据：cards 7 / edits 7 / 0 错误。
 - 踩坑：app.js 提取 IIFE 主体用 src.indexOf('(function(){') 会命中第23行 lightbox 的 (function(){ 而非第2行主 IIFE；正确切法用 src.length-4 剥尾})(); 取主 IIFE 内层（第2行到文件尾-4）。（通用：测试工具提取封闭体时先确认边界命中点）
 
+【真机根因确认】错题库 tab 列表空白的真正原因：splice 重构时把模块级 var libFilter/var libData 声明弄丢 → renderLibraryFilter 抛 ReferenceError: libFilter is not defined → 列表空白（TOPICS 未加载只是次要）。修复=补回两行 var 声明。headless Edge+CDP 真机验证：切错题库→7 卡全渲染、id=1/3 标缺失、点编辑 9 字段表单+51 知识点+缺图提示、CONSOLE 零报错。教训：大文件 splice/重构模块级 var 声明易丢，改完必须用真机 CDP 验证（node --check 抓不到 ReferenceError）；CDP 脚本要存 .cjs(CommonJS)；headless Edge 启动需 danger-full-access。
+
 ## 12. 已知未决事项
 
 
