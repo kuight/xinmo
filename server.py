@@ -444,6 +444,78 @@ def _append_problem_jsonl(row):
         pass  # audit failure must not block recording
 
 
+# ---------- library (history error-book) ----------
+@app.get('/api/library')
+def library(subject: str = '', state: str = '', q: str = ''):
+    """List all problems (any state) with attempt stats. Optional filters:
+    subject code, state (active/refined), and text q matching topic_label/source/answer_text/note."""
+    conn = get_db()
+    sql = 'SELECT * FROM problem WHERE 1=1'
+    args = []
+    if subject:
+        sql += ' AND subject=?'
+        args.append(subject)
+    if state:
+        sql += ' AND state=?'
+        args.append(state)
+    if q:
+        like = '%' + q + '%'
+        sql += (' AND (topic_label LIKE ? OR source LIKE ? OR answer_text LIKE ? '
+                'OR note LIKE ? OR error_type LIKE ? OR question_type LIKE ?)')
+        args += [like, like, like, like, like, like]
+    sql += ' ORDER BY id DESC'
+    rows = conn.execute(sql, args).fetchall()
+    items = []
+    for r in rows:
+        d = problem_row_to_dict(r)
+        a = conn.execute(
+            'SELECT COUNT(*) AS n, MAX(result) AS last_result FROM attempt WHERE problem_id=?',
+            (r['id'],)).fetchone()
+        d['attempt_count'] = a['n']
+        d['last_result'] = a['last_result']
+        # image availability (so front-end can flag broken images)
+        d['image_missing'] = bool(r['image_path']) and _local_image_path(r['image_path']) is None
+        d['answer_image_missing'] = bool(r['answer_image_path']) and _local_image_path(r['answer_image_path']) is None
+        items.append(d)
+    conn.close()
+    return JSONResponse({'ok': True, 'items': items})
+
+
+@app.post('/api/problem/{pid}')
+async def update_problem(pid: int, payload: dict):
+    """Update any editable field of an existing problem (replace broken image supported).
+    Editable: subject, topic, topic_label, error_type, question_type, note, answer_text,
+    image_path, answer_image_path, source. created_at/ease/interval/due/streak/state stay as-is."""
+    conn = get_db()
+    row = conn.execute('SELECT * FROM problem WHERE id=?', (pid,)).fetchone()
+    if row is None:
+        conn.close()
+        return JSONResponse({'ok': False, 'error': 'no such problem'}, status_code=404)
+
+    fields = {}
+    for key in ('subject', 'topic', 'topic_label', 'error_type', 'question_type',
+                'note', 'answer_text', 'image_path', 'answer_image_path', 'source'):
+        if key in payload:
+            v = payload[key]
+            fields[key] = v if v is not None else ''
+    # reject empty subject/topic/topic_label (they are required invariants)
+    if not fields.get('subject', '').strip():
+        return JSONResponse({'ok': False, 'error': 'subject required'}, status_code=400)
+    if not fields.get('topic', '').strip():
+        return JSONResponse({'ok': False, 'error': 'topic required'}, status_code=400)
+    if not fields.get('topic_label', '').strip():
+        fields['topic_label'] = _topic_label_by_id(fields['subject'], fields['topic']) or fields['topic']
+
+    if fields:
+        sets = ', '.join('%s=?' % k for k in fields)
+        conn.execute('UPDATE problem SET %s WHERE id=?' % sets, list(fields.values()) + [pid])
+    conn.commit()
+    updated = conn.execute('SELECT * FROM problem WHERE id=?', (pid,)).fetchone()
+    _append_problem_jsonl(updated)
+    conn.close()
+    return JSONResponse({'ok': True, 'problem': problem_row_to_dict(updated)})
+
+
 # ---------- problem ----------
 @app.post('/api/problem')
 async def create_problem(payload: dict):
