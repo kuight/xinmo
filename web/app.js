@@ -490,17 +490,22 @@ function renderStatsData(p,d){
 
   var s2=el('div','stats-section');
   s2.appendChild(el('h2',null,t('stats.dailyTitle')));
-  var cv=el('canvas');cv.width=700;cv.height=230;cv.className='daily-chart';
+  var dpr=window.devicePixelRatio||1;
+  var cv=el('canvas');cv.className='daily-chart';
+  cv.style.width='700px';cv.style.height='230px';
+  cv.width=Math.round(700*dpr);cv.height=Math.round(230*dpr);  // scale buffer by devicePixelRatio
   s2.appendChild(cv);
   p.appendChild(s2);
   drawDailyChart(cv,d.daily||[]);
 }
 function drawDailyChart(cv,daily){
+  var dpr=window.devicePixelRatio||1;
   var ctx=cv.getContext('2d');
-  var W=cv.width,H=cv.height;
-  ctx.clearRect(0,0,W,H);
-  var padL=30,padR=10,padT=14,padB=40;
-  var cw=W-padL-padR,chh=H-padT-padB;
+  var Lw=700,Lh=230;  // logical CSS size
+  ctx.setTransform(dpr,0,0,dpr,0,0);  // scale ctx by devicePixelRatio so logical coords map to physical pixels
+  ctx.clearRect(0,0,Lw,Lh);
+  var padL=36,padR=12,padT=20,padB=44;  // extra room for 12px labels + value labels
+  var cw=Lw-padL-padR,chh=Lh-padT-padB;
   var maxv=1;
   daily.forEach(function(x){if(x.added>maxv)maxv=x.added;if(x.redone>maxv)maxv=x.redone;});
   var n=daily.length;
@@ -510,19 +515,23 @@ function drawDailyChart(cv,daily){
     var x0=padL+i*(cw/n)+gap/2;
     var a=daily[i];
     var ah=(a.added/maxv)*chh;
-    ctx.fillStyle='#1d5fd6';
-    ctx.fillRect(x0,padT+chh-ah,bw,ah);
     var rh=(a.redone/maxv)*chh;
-    ctx.fillStyle='#d99a2b';
-    ctx.fillRect(x0+bw,padT+chh-rh,bw,rh);
+    ctx.fillStyle='#1d5fd6';ctx.fillRect(x0,padT+chh-ah,bw,ah);
+    ctx.fillStyle='#d99a2b';ctx.fillRect(x0+bw,padT+chh-rh,bw,rh);
+    // value on top of each bar (12px)
+    ctx.font='12px sans-serif';ctx.textAlign='center';
+    if(a.added>0){ctx.fillStyle='#1d5fd6';ctx.fillText(String(a.added),x0+bw/2,padT+chh-ah-3);}
+    if(a.redone>0){ctx.fillStyle='#d99a2b';ctx.fillText(String(a.redone),x0+bw+bw/2,padT+chh-rh-3);}
   }
-  ctx.fillStyle='#667';ctx.font='10px sans-serif';ctx.textAlign='center';
+  // axis date labels >= 12px
+  ctx.fillStyle='#667';ctx.font='12px sans-serif';ctx.textAlign='center';
   for(var i=0;i<n;i++){
-    ctx.fillText((daily[i].date||'').slice(5),padL+i*(cw/n)+cw/n/2,H-padB+10);
+    ctx.fillText((daily[i].date||'').slice(5),padL+i*(cw/n)+cw/n/2,Lh-padB+12);
   }
-  ctx.textAlign='left';
-  ctx.fillStyle='#1d5fd6';ctx.fillText(t('stats.legendAdded'),padL,H-18);
-  ctx.fillStyle='#d99a2b';ctx.fillText(t('stats.legendRedone'),padL+46,H-18);
+  // legend (13px, wider spacing)
+  ctx.textAlign='left';ctx.font='13px sans-serif';
+  ctx.fillStyle='#1d5fd6';ctx.fillText(t('stats.legendAdded'),padL,Lh-16);
+  ctx.fillStyle='#d99a2b';ctx.fillText(t('stats.legendRedone'),padL+80,Lh-16);
 }
 
 // ---- trace (D5): today list + knowledge tree + heatmap ----
