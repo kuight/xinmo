@@ -14,8 +14,8 @@
 - 依赖：fastapi / uvicorn / pillow
 
 ## 3. 当前 git 状态（2026-08-30）
-- xinmo 本地 HEAD：`0de6b0a`（D7-fix，含 item1-6 + 4 个 bug 修复），**领先 origin 9 个 commit 未推**
-- wendao 本地 master 领先 origin 1 个（cf2a325）
+- xinmo 本地 HEAD：`0cd3de8`（知识库归档），**领先 origin 10 个 commit 全部已推**
+- wendao 本地 master=origin=cf2a325（已同步，无需再 push）
 - 工作树干净（已清理所有临时 `_*.py`/`_*.txt`）
 - 注意：新 ghp_ token 写进了 wendao 与 xinmo 两个本地仓库的 `.git/config` remote URL（仅本地未入库）
 
@@ -56,5 +56,5 @@ POST /api/upload：Pillow 压缩≤1400px/JPEG q82/≤300KB，落盘 data/images
 
 ## 10. 已知未决事项
 - 旧题图片 404（数据问题）：id=1/id=3 的图片文件已丢失，无法代码修复，待用户确认删题或不管
-- 本地领先的 9 个 commit 未推 GitHub（item1-6 + 修复）
+- 本地 10 个 commit 已推 GitHub（origin master+main 均到 0cd3de8，2026-08-30 完成）
 - 若用户在意，可清掉两仓库 .git/config 里的 ghp_ token（会改为每次 push 手动输凭证）
