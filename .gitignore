@@ -1,4 +1,5 @@
 config.local.json
+_config.local.backup.json
 data/*.db
 data/images/
 data/problems.jsonl
