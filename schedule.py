@@ -132,7 +132,8 @@ def d2i(dstr):
 
 
 def i2d(dayint):
-    """Integer ordinal day number -> YYYY-MM-DD."""
+    """Integer ordinal day number -> YYYY-MM-DD. Floors fractional dayint at entry."""
+    import math
     from datetime import date
-    d = date.fromordinal(dayint)
+    d = date.fromordinal(int(math.floor(dayint)))
     return '%04d-%02d-%02d' % (d.year, d.month, d.day)
