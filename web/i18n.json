@@ -4,7 +4,8 @@
     "entry": "录入",
     "today": "今日",
     "stats": "统计",
-    "trace": "足迹"
+    "trace": "足迹",
+    "library": "错题库"
   },
   "subjects": {
     "physics": "物理",
