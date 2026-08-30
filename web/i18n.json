@@ -132,7 +132,8 @@
     "legendUnseen": "未遇",
     "legendActive": "有活跃",
     "legendReviewing": "复习中",
-    "legendRefined": "已炼化"
+    "legendRefined": "已炼化",
+    "chapterCountTpl": "已遇 %n / 共 %m"
   },
   "stats": {
     "title": "统计",

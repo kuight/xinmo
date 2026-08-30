@@ -68,7 +68,11 @@ img.thumb{max-width:120px;max-height:90px;border-radius:6px;border:1px solid #dd
 .kt-subject{margin-bottom:12px}
 .kt-summary{font-size:13px;color:#556;font-weight:bold;margin:6px 0}
 .kt-chapter{margin:4px 0 4px 4px}
-.kt-chapter-name{font-size:13px;color:#778;margin:6px 0 3px}
+.kt-chapter-name{font-size:13px;color:#334;font-weight:600;margin:6px 0 3px;cursor:pointer;user-select:none;display:inline-block}
+.kt-chapter-name:hover{color:#0b57c9}
+.kt-ch-count{font-size:11px;color:#889;font-weight:normal;margin-left:6px}
+.kt-chapter .kt-nodes{display:none}
+.kt-chapter.open .kt-nodes{display:flex}
 .kt-nodes{display:flex;flex-wrap:wrap;gap:6px}
 .kt-node{font-size:12px;padding:5px 9px;border-radius:7px;border:1px solid #d5deeb;position:relative}
 .kt-node .an{font-size:10px;color:#c00;margin-left:4px}
