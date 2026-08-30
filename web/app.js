@@ -615,6 +615,10 @@ function renderTraceData(p,d){
   p.appendChild(s3);
 }
 
+// ---- library (history error-book): browse all problems + edit every field / replace image ----
+var libFilter = {subject: '', state: '', q: ''};
+var libData = null;  // last loaded {items}
+
 function renderLibrary(){
   var p=document.getElementById('page-library');p.innerHTML='';
   p.appendChild(el('h2',null,t('library.title')));
