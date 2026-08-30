@@ -619,6 +619,12 @@ function renderLibrary(){
   var p=document.getElementById('page-library');p.innerHTML='';
   p.appendChild(el('h2',null,t('library.title')));
   p.appendChild(el('div','muted',t('library.subtitle')));
+  // TOPICS must be loaded before rendering cards/edit form (openEditForm uses TOPICS for topic picker)
+  loadTopics(function(){
+    renderLibraryFilter(p);
+  });
+}
+function renderLibraryFilter(p){
   var bar=el('div','lib-filter');
   var subjSel=el('select');
   var o0=el('option',null,t('library.allSubjects'));o0.value='';subjSel.appendChild(o0);
