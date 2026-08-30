@@ -60,7 +60,15 @@ POST /api/upload：Pillow 压缩≤1400px/JPEG q82/≤300KB，落盘 data/images
 - 后端 GET /api/library（返回 image_missing/answer_image_missing 缺失标记）+ POST /api/problem/{id}（更新可编辑字段，写 jsonl 审计）
 - 交接后两项用户决策：①wendao 已停止跟踪 xinmo/（.gitignore + git rm --cached）两仓库彻底分开；②旧题图片缺失(id=1/3)按用户决策保留不管（现可在错题库编辑表单内手工替换）
 
-## 11. 已知未决事项
+## 11. D8 错题库 bug 修复记录（2026-08-30）
+- 现象：用户切到错题库tab看不到历史错题列表（空/加载失败）。
+- 根因：openEditForm 的 renderTopicSlot 读 TOPICS[st.subject]，但 TOPICS 只在 renderEntry 里由 loadTopics 加载；直进错题库 tab 时 TOPICS 为 null → 抛 TypeError 中断渲染，列表空白。
+- 修复：renderLibrary 改为先 loadTopics(cb) 再渲染筛选栏+列表（渲染卡片前 TOPICS 已就绪）。
+- 验证：node 最小 DOM mock 提取 app.js IIFE 主体后，先 loadTopics 再跑 buildLibraryCard+openEditForm 对 7 条真实 API 数据：cards 7 / edits 7 / 0 错误。
+- 踩坑：app.js 提取 IIFE 主体用 src.indexOf('(function(){') 会命中第23行 lightbox 的 (function(){ 而非第2行主 IIFE；正确切法用 src.length-4 剥尾})(); 取主 IIFE 内层（第2行到文件尾-4）。（通用：测试工具提取封闭体时先确认边界命中点）
+
+## 12. 已知未决事项
+
 
 - 旧题图片 404（数据问题）：id=1/id=3 的图片文件已丢失，无法代码修复，待用户确认删题或不管
 - 本地 10 个 commit 已推 GitHub（origin master+main 均到 0cd3de8，2026-08-30 完成）
