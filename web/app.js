@@ -14,6 +14,8 @@ var entryImg = {q: '', a: ''};  // uploaded web paths for question/answer images
 function merge(a,b){for(var k in b){if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])){a[k]=a[k]||{};merge(a[k],b[k]);}else{a[k]=b[k];}}}
 function t(key, def){var p=I18N,ks=key.split('.');for(var i=0;i<ks.length;i++){if(p==null)break;p=p[ks[i]];}return typeof p==='string'?p:(def||key);}
 function el(tag,cls,html){var e=document.createElement(tag);if(cls)e.className=cls;if(html!==undefined)e.innerHTML=html;return e;}
+// tpl: replace %token placeholders (e.g. %s, %d, %n, %m) with named values; every occurrence replaced
+function tpl(tmpl, vals){return (tmpl||'').replace(/%([a-zA-Z]+)/g,function(_,k){return vals[k]!==undefined?vals[k]:('%'+k);});}
 function toast(m){var x=document.getElementById('toast');x.textContent=m;x.classList.add('show');clearTimeout(x._t);x._t=setTimeout(function(){x.classList.remove('show');},1600);}
 
 // ---- lightbox ----
@@ -537,7 +539,7 @@ function drawDailyChart(cv,daily){
 // ---- trace (D5): today list + knowledge tree + heatmap ----
 function renderTrace(){
   var p=document.getElementById('page-trace');p.innerHTML='';
-  fetch('/api/trace').then(function(r){return r.json();}).then(function(d){renderTraceData(p,d);}).catch(function(){p.innerHTML='load failed';});
+  fetch('/api/trace').then(function(r){return r.json();}).then(function(d){renderTraceData(p,d);}).catch(function(e){window.__traceErr=(e&&e.stack)||String(e);p.innerHTML='load failed';});
 }
 function renderTraceData(p,d){
   // --- section 1: today list ---
@@ -631,5 +633,5 @@ document.addEventListener('paste',function(e){
 });
 
 // ---- boot ----
-fetch('/web/i18n.json').then(function(r){return r.json();}).then(function(d){merge(I18N,d);document.getElementById('title').textContent=I18N.appTitle||'xinmo';renderTabs();setTab('entry');}).catch(function(){renderTabs();setTab('entry');});
+fetch('/web/i18n.json?v='+Date.now()).then(function(r){return r.json();}).then(function(d){merge(I18N,d);document.getElementById('title').textContent=I18N.appTitle||'xinmo';renderTabs();setTab('entry');}).catch(function(){renderTabs();setTab('entry');});
 })();

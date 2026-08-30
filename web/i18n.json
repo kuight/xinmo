@@ -149,6 +149,8 @@
     },
     "loadFailed": "统计加载失败",
     "legendAdded": "录入",
-    "legendRedone": "重做"
+    "legendRedone": "重做",
+    "errorTitle": "按错因分布",
+    "dailyTitle": "近 14 天活跃"
   }
 }
