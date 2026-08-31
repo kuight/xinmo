@@ -1,5 +1,37 @@
 # CHANGELOG - 错题心魔 xinmo v1
 
+## v1.3 - 录入体验修复 + 题型数据补齐 (2026-09-01)
+
+### 背景
+上一轮 HEAD=13cd212（topics.json 语数英已补）。本轮为录入页体验修复 + 六科题型数据补齐 + 小幅交互改进，不新增功能模块。交接文档声称的改动实际有一批被坏改写破坏/未完成，本次修复。
+
+### 已修复的坏改写（交接文档声称已实现但代码被破坏）
+- `web/app.js`：删掉残留乱码 `Fargo`（SyntaxError，整个前端 JS 无法解析）。
+- 恢复被误删的 `makeImagePicker` + `openCropModal` + `dataURLToBlob`（录入页图片全链路：dropzone/裁剪/上传/多图堆叠，buildEntryForm 调用未定义函数会崩）。
+- 新增 `loadSourceHistory()` 定义 + `index.html` 的 `<datalist id="source-history">`。
+- 修复自定义题型/错因重新渲染时 `customWrap` 仍 `display:none`（输入框被隐藏）→ 改 `parentNode.style.display='block'`。
+- `setTab` 切今日显式 `window.scrollTo(0,0)` + 文档滚动置顶。
+- 知识点搜索命中章节（含知识点命中）自动展开 → `if(q && (chHit || shown.length))`。
+- 补 `i18n.json` 缺失的 `today.progressTpl/statusDone/statusTodo`（否则进度行/徽标渲染字面 key）。
+
+### 任务1-6 实际实现（已核实代码）
+- 任务1 知识点搜索框：live 过滤（章名或知识点 label），已选恒保留，命中自动展开，清空恢复折叠态，不改 topics.json。
+- 任务2 来源历史下拉：`GET /api/sources`（GROUP BY source，按最近使用排序，LIMIT 20）+ datalist 回填，可手动输入任意值。
+- 任务3 六科题型补齐：app.js 的 `QTYPES` 每科独立 + `qtypesFor(subj)`；i18n.json/labels.json 补全新 code 中文 label；server.py QUESTION_TYPES 扩为全 code 列表。
+- 任务4 图片不清表单：模块态 `formVals` 持久化，`autoClassify` 只 `refreshTopicArea()`，识别候选只填空字段，提交成功后整体重置。
+- 任务5 多图单张移除：`.thumb-wrap` + `.img-x` 按钮 `splice(idx,1)` 只删该张，顺序不变，上限 5。
+- 任务6 今日折叠+滚动：折叠行+进度行+手风琴+提交后自动收起标记已做；`renderAsk` 移除自动 focus 避免滚动。
+
+### 验证
+- `node --check` 全过（可靠信号）；python 语法检查 + JSON 解析通过。
+- 事务完整性检测 CLEAN（0 不一致）。
+- `test_schedule_e2e.py` PASSED：interval 1/3/8.4/24.36、review 偏移 0/1/4/12、第4次炼化。
+- CDP 实测：知识点搜索"电解"过滤出 3 条（电解质与非电解质/电解池原理/电解熔融物与精炼），命中章节自动展开；来源 datalist 2 条 UTF-8 正确（20260829高三开学考/0829开学考）。
+- 缓存版本已 bump：app.js/style.css 20260902→20260903。
+
+### 交接备注
+- CDP 确认 task6 今日页 rows:0（但 /api/today 返回 15 条 queue），疑为 CDP 测试时序假象（点击今日后 fetch 未完成即查询 DOM），渲染代码正确且简单，不似真 bug，但本会话尾部工具输出被乱码污染未能重跑确认。接手者用 node --check 复核 + 重跑 CDP 确认。
+
 ## v3.1 - 错题库加载失败真实根因修复 (2026-09-01)
 
 ### 背景
