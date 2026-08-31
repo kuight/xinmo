@@ -1,5 +1,25 @@
 # CHANGELOG - 错题心魔 xinmo v1
 
+## v3.1 - 错题库加载失败真实根因修复 (2026-09-01)
+
+### 背景
+v3 交接文档对"错题库加载失败"的结论是"前后端健康、无加载失败"，该结论错误。真实浏览器（headless Chrome CDP）复测证明存在真实代码 bug，本次修复。
+
+### 根因：局部变量 `var t` 遮蔽全局 i18n 翻译函数 `t()`
+`web/app.js` 的 `buildLibraryCard()` 渲染题图/答案图的 `forEach` 循环里声明局部 `var t = imgThumb(p)`，遮蔽了全局翻译函数 `t()`。当记录存在缺失图片（`image_missing`/`answer_image_missing` 为真）时，`t('library.brokenImage')` 会在 `<img>` DOM 节点上被当作函数调用，抛 `TypeError: t is not a function`，中断整批卡片渲染。该异常被 `.catch()` 静默吞掉，`window.error`/`unhandledrejection` 均捕获不到，需给 `Promise.prototype.then` 打补丁拦截 `.then` 内抛出的异常才能暴露。
+
+### 修复
+- `web/app.js`：两个图片 `forEach` 的局部变量 `t` → `th`，恢复 `t()` 为对翻译函数的引用（commit `833e344`）。
+- `scripts/cdp_chrome.cjs`：Chrome 路径改到 LocalAppData 真实位置；调试端口 9222 → 随机空闲端口；新增 Promise.then 补丁技巧捕获被吞的异常。
+
+### 验证（headless Chrome CDP 实测）
+- 修复前：筛选下拉正常（6 学科），但 0 张卡片，末尾"共 N 题 错题库加载失败"。
+- 修复后：`{"cards":22,"thumbs":54,"hasFail":false}`——22 张卡片、54 张缩略图全渲染，"加载失败"消失，卡片内容完整（学科·知识点·错因·题类型·状态·熟练度·间隔·下次·批注·编辑）。
+
+### 关键坑沉淀
+- 局部变量遮蔽全局函数是隐蔽 bug：`forEach` 回调里 `var t` 遮蔽 i18n 的 `t()`，且被 `.catch` 静默吞掉。DOM 渲染时避免用 `t`/`$` 作循环变量。
+- 排查"静默失败"：给 `Promise.prototype.then` 打补丁，把 `onFul` 包 try/catch 记录到 `window.__throwLog` 再 rethrow，才能拿到真实堆栈。
+
 ## v1.3 - 补语数英知识点（纯数据，不加功能） (2026-08-31)
 
 ### 新增
