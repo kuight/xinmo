@@ -1,5 +1,22 @@
 # CHANGELOG - 错题心魔 xinmo v1
 
+## v1.3.1 - 修复今日页/错题库"加载失败" (2026-09-01)
+
+### 根因
+上轮 v1.3 坏改写误删了图片辅助函数 `imgThumb`（`function imgThumb(path){...}`），我上轮恢复了 `makeImagePicker`/`openCropModal`/`dataURLToBlob` 但漏掉了它。`imgThumb` 被 3 处调用：
+- `renderImageStack`（今日卡渲染题图）
+- `buildLibraryCard` 两处（错题库卡渲染题图/答案图）
+
+运行时抛 `ReferenceError: imgThumb is not defined`，被 `.catch()` 吞掉后显示"加载失败"——同时导致今日页和错题库两个 tab 崩溃。
+
+### 修复
+- `web/app.js`：恢复 `imgThumb` 定义（从初始 commit 8c1e993 提取原始版本）。
+- 验证：`node --check` 通过；浏览器 CDP 实测——今日页 15 行折叠卡+进度行+状态徽标正常渲染、错题库 22 张卡正常渲染、`Promise.then` 补丁捕获的运行时异常列表为空。
+
+### 诊断方法沉淀
+- 页面报"加载失败"是 `.catch()` 吞掉渲染异常。用 v3.1 的 Promise.then 补丁技术：先 patch `Promise.prototype.then` 记录 onFul 抛出的 stack 到 `window.__throwLog`，再触发真实 tab 点击流（IIFE 内调用渲染函数），即可拿到被吞的真实错误。
+- IIFE 包裹的脚本（`(function(){...})()`）内部函数不是全局的，`typeof renderToday` 为 undefined 是正常现象，不能据此判断脚本没执行。
+
 ## v1.3 - 录入体验修复 + 题型数据补齐 (2026-09-01)
 
 ### 背景

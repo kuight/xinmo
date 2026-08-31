@@ -32,6 +32,8 @@ function toast(m){var x=document.getElementById('toast');x.textContent=m;x.class
 function splitMulti(s){s=(s||'');return s?s.split(';').map(function(x){return x.trim();}).filter(Boolean):[];}
 function joinMulti(arr){return (arr||[]).join(';');}
 function capArr(arr,n){arr=(arr||[]).filter(Boolean);return arr.slice(0,n);}
+// v1.2: thumbnail image (click to zoom); used by today cards, library cards, and the reveal panel.
+function imgThumb(path){var im=el('img','thumb');im.src=path;im.onclick=function(){showLightbox(path);};return im;}
 // render every image in a ';'-joined path string, stacked vertically, click to zoom.
 function renderImageStack(container,joinedPath){
   var paths=splitMulti(joinedPath);
