@@ -700,16 +700,18 @@ def trace():
     # --- 1. today list: entries created today + attempts today, newest first ---
     items = []
     for r in conn.execute(
-            "SELECT id, topic_label, error_type, source, note, created_at FROM problem WHERE substr(created_at,1,10)=?",
+            "SELECT id, topic_label, error_type, source, note, created_at, subject FROM problem WHERE substr(created_at,1,10)=?",
             (today,)).fetchall():
-        items.append({'kind': 'add', 'order': r['created_at'], 'topic_label': r['topic_label'],
+        items.append({'kind': 'add', 'order': r['created_at'], 'time': (r['created_at'] or '')[11:16],
+                      'subject': r['subject'] or '', 'topic_label': r['topic_label'] or '',
                       'error_label': ERROR_LABEL.get(r['error_type'], r['error_type']),
                       'source': r['source'] or '', 'note': r['note'] or ''})
     for r in conn.execute(
-            "SELECT a.id AS aid, a.ts, a.result, a.judged, p.topic_label, p.error_type, p.source, p.note "
+            "SELECT a.id AS aid, a.ts, a.result, a.judged, p.topic_label, p.error_type, p.source, p.note, p.subject "
             "FROM attempt a JOIN problem p ON a.problem_id=p.id WHERE substr(a.ts,1,10)=?",
             (today,)).fetchall():
-        items.append({'kind': 'redo', 'order': r['ts'], 'topic_label': r['topic_label'],
+        items.append({'kind': 'redo', 'order': r['ts'], 'time': (r['ts'] or '')[11:16],
+                      'subject': r['subject'] or '', 'topic_label': r['topic_label'] or '',
                       'result': r['result'], 'judged': r['judged'],
                       'error_label': ERROR_LABEL.get(r['error_type'], r['error_type']),
                       'source': r['source'] or '', 'note': r['note'] or ''})
@@ -717,17 +719,19 @@ def trace():
 
     # --- 2. knowledge tree: per subject/chapter/topic state ---
     topics_data = load_topics()
-    # gather per-topic aggregates
+    # gather per-topic aggregates (v1.2 multi-topic: split topic on ';', each tag counts separately)
     agg = {}
     for r in conn.execute(
-            "SELECT topic, state, streak, COUNT(*) AS n FROM problem GROUP BY topic, state, streak").fetchall():
-        a = agg.setdefault(r['topic'], {'active': 0, 'refined': 0, 'reviewing': 0})
-        if r['state'] == 'refined':
-            a['refined'] += r['n']
-        else:
-            a['active'] += r['n']
-            if r['streak'] and r['streak'] >= 1:
-                a['reviewing'] += r['n']
+            "SELECT topic, state, streak FROM problem").fetchall():
+        tags = [x for x in str(r['topic'] or '').split(';') if x] or ['unclassified']
+        for tag in tags:
+            a = agg.setdefault(tag, {'active': 0, 'refined': 0, 'reviewing': 0})
+            if r['state'] == 'refined':
+                a['refined'] += 1
+            else:
+                a['active'] += 1
+                if r['streak'] and r['streak'] >= 1:
+                    a['reviewing'] += 1
 
     def node_state(tid):
         a = agg.get(tid)
@@ -794,6 +798,41 @@ def trace():
         'heatmap': days,
         'streak': streak,
     })
+
+
+# ---------- trace/day (v1.2: heatmap cell drill-down detail) ----------
+@app.get('/api/trace/day')
+def trace_day(date: str = ''):
+    """Per-day footprint detail for a heatmap cell: what was actually done that day.
+    Each row: kind (add|redo), subject, topic_label, time HH:MM, source, and for redo the result.
+    Returned on-demand only (never bulk-loaded at page render)."""
+    if not date:
+        return JSONResponse({'ok': False, 'error': 'date required'}, status_code=400)
+    try:
+        from datetime import date as _d
+        _d.fromisoformat(date)
+    except Exception:
+        return JSONResponse({'ok': False, 'error': 'bad date'}, status_code=400)
+    conn = get_db()
+    items = []
+    for r in conn.execute(
+            "SELECT topic_label, error_type, source, note, created_at, subject FROM problem "
+            "WHERE substr(created_at,1,10)=?", (date,)).fetchall():
+        items.append({'kind': 'add', 'time': (r['created_at'] or '')[11:16],
+                      'subject': r['subject'] or '',
+                      'topic_label': r['topic_label'] or '', 'error_type': r['error_type'],
+                      'source': r['source'] or '', 'note': r['note'] or ''})
+    for r in conn.execute(
+            "SELECT a.ts, a.result, a.judged, p.topic_label, p.error_type, p.source, p.subject "
+            "FROM attempt a JOIN problem p ON a.problem_id=p.id WHERE substr(a.ts,1,10)=?",
+            (date,)).fetchall():
+        items.append({'kind': 'redo', 'time': (r['ts'] or '')[11:16],
+                      'result': r['result'], 'judged': r['judged'],
+                      'topic_label': r['topic_label'] or '', 'error_type': r['error_type'],
+                      'source': r['source'] or '', 'subject': r['subject'] or ''})
+    conn.close()
+    items.sort(key=lambda x: x['time'], reverse=True)
+    return JSONResponse({'ok': True, 'date': date, 'items': items, 'total': len(items)})
 
 
 # ---------- backup ----------

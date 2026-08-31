@@ -69,6 +69,10 @@
     "needImage": "请先贴题目图片",
     "takePhoto": "拍照",
     "chooseAlbum": "从相册选择",
+    "maxImages": "最多 5 张图",
+    "imgCount": "已选 %n / %max 张（按标签计）",
+    "maxTopics": "最多 3 个标签",
+    "topicCount": "已选 %n / %max 个",
     "cropTitle": "裁剪图片",
     "cropConfirm": "确定裁剪",
     "cropCancel": "取消",
@@ -134,7 +138,14 @@
     "legendActive": "有活跃",
     "legendReviewing": "复习中",
     "legendRefined": "已炼化",
-    "chapterCountTpl": "已遇 %n / 共 %m"
+    "chapterCountTpl": "已遇 %n / 共 %m",
+    "pageTpl": "第 %x / %y 页",
+    "prevPage": "上一页",
+    "nextPage": "下一页",
+    "dayLoading": "加载中…",
+    "dayEmpty": "这一天没有动作",
+    "dayMore": "共 %n 条",
+    "dayLoadFail": "加载失败"
   },
   "stats": {
     "title": "统计",
