@@ -1287,5 +1287,672 @@
     ]
    }
   ]
+ },
+ "math": {
+  "chapters": [
+   {
+    "name": "集合与常用逻辑用语",
+    "topics": [
+     {
+      "id": "math-set-ops",
+      "label": "集合的运算",
+      "prereq": []
+     },
+     {
+      "id": "math-suf-nec",
+      "label": "充分必要条件",
+      "prereq": []
+     },
+     {
+      "id": "math-quantifier",
+      "label": "全称与存在量词",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "不等式",
+    "topics": [
+     {
+      "id": "math-ineq-prop",
+      "label": "不等式性质",
+      "prereq": []
+     },
+     {
+      "id": "math-basic-ineq",
+      "label": "基本不等式",
+      "prereq": []
+     },
+     {
+      "id": "math-quad-ineq",
+      "label": "一元二次不等式",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "函数",
+    "topics": [
+     {
+      "id": "math-func-def",
+      "label": "函数的概念与定义域",
+      "prereq": []
+     },
+     {
+      "id": "math-func-monotonic",
+      "label": "函数的单调性",
+      "prereq": []
+     },
+     {
+      "id": "math-func-parity",
+      "label": "函数的奇偶性与对称性",
+      "prereq": []
+     },
+     {
+      "id": "math-func-period",
+      "label": "函数的周期性",
+      "prereq": []
+     },
+     {
+      "id": "math-quad-func",
+      "label": "二次函数",
+      "prereq": []
+     },
+     {
+      "id": "math-exponential",
+      "label": "指数与指数函数",
+      "prereq": []
+     },
+     {
+      "id": "math-logarithmic",
+      "label": "对数与对数函数",
+      "prereq": []
+     },
+     {
+      "id": "math-power-func",
+      "label": "幂函数",
+      "prereq": []
+     },
+     {
+      "id": "math-graph-transform",
+      "label": "函数图象变换",
+      "prereq": []
+     },
+     {
+      "id": "math-func-zero",
+      "label": "函数与方程（零点）",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "三角",
+    "topics": [
+     {
+      "id": "math-angle-radian",
+      "label": "任意角与弧度制",
+      "prereq": []
+     },
+     {
+      "id": "math-trig-def",
+      "label": "三角函数定义与同角关系",
+      "prereq": []
+     },
+     {
+      "id": "math-reduction",
+      "label": "诱导公式",
+      "prereq": []
+     },
+     {
+      "id": "math-trig-graph",
+      "label": "三角函数图象与性质",
+      "prereq": []
+     },
+     {
+      "id": "math-sinusoid",
+      "label": "正弦型函数图象变换",
+      "prereq": []
+     },
+     {
+      "id": "math-sum-diff-angle",
+      "label": "和差角公式",
+      "prereq": []
+     },
+     {
+      "id": "math-double-angle",
+      "label": "二倍角公式",
+      "prereq": []
+     },
+     {
+      "id": "math-aux-angle",
+      "label": "辅助角公式",
+      "prereq": []
+     },
+     {
+      "id": "math-sine-theorem",
+      "label": "解三角形（正弦定理）",
+      "prereq": []
+     },
+     {
+      "id": "math-cosine-theorem",
+      "label": "解三角形（余弦定理）",
+      "prereq": []
+     },
+     {
+      "id": "math-triangle-area",
+      "label": "三角形面积与最值",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "数列",
+    "topics": [
+     {
+      "id": "math-arithmetic-seq",
+      "label": "等差数列",
+      "prereq": []
+     },
+     {
+      "id": "math-geometric-seq",
+      "label": "等比数列",
+      "prereq": []
+     },
+     {
+      "id": "math-seq-general-term",
+      "label": "数列求通项",
+      "prereq": []
+     },
+     {
+      "id": "math-seq-sum-shift",
+      "label": "数列求和（错位相减）",
+      "prereq": []
+     },
+     {
+      "id": "math-seq-sum-split",
+      "label": "数列求和（裂项）",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "导数",
+    "topics": [
+     {
+      "id": "math-derivative-rule",
+      "label": "导数的运算",
+      "prereq": []
+     },
+     {
+      "id": "math-derivative-geo",
+      "label": "导数的几何意义",
+      "prereq": []
+     },
+     {
+      "id": "math-derivative-monotonic",
+      "label": "用导数研究单调性",
+      "prereq": []
+     },
+     {
+      "id": "math-derivative-extreme",
+      "label": "极值与最值",
+      "prereq": []
+     },
+     {
+      "id": "math-derivative-ineq",
+      "label": "导数与不等式证明",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "向量",
+    "topics": [
+     {
+      "id": "math-vec-ops",
+      "label": "平面向量的运算",
+      "prereq": []
+     },
+     {
+      "id": "math-vec-dot",
+      "label": "平面向量的数量积",
+      "prereq": []
+     },
+     {
+      "id": "math-vec-coord",
+      "label": "向量的坐标表示",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "立体几何",
+    "topics": [
+     {
+      "id": "math-space-relations",
+      "label": "空间点线面位置关系",
+      "prereq": []
+     },
+     {
+      "id": "math-space-parallel-perp",
+      "label": "平行与垂直的判定与性质",
+      "prereq": []
+     },
+     {
+      "id": "math-space-angle",
+      "label": "空间角（线面角、二面角）",
+      "prereq": []
+     },
+     {
+      "id": "math-space-vector",
+      "label": "空间向量与坐标法",
+      "prereq": []
+     },
+     {
+      "id": "math-space-volume",
+      "label": "表面积与体积",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "解析几何",
+    "topics": [
+     {
+      "id": "math-line-equation",
+      "label": "直线方程与位置关系",
+      "prereq": []
+     },
+     {
+      "id": "math-circle-equation",
+      "label": "圆的方程",
+      "prereq": []
+     },
+     {
+      "id": "math-ellipse",
+      "label": "椭圆",
+      "prereq": []
+     },
+     {
+      "id": "math-hyperbola",
+      "label": "双曲线",
+      "prereq": []
+     },
+     {
+      "id": "math-parabola",
+      "label": "抛物线",
+      "prereq": []
+     },
+     {
+      "id": "math-line-conic",
+      "label": "直线与圆锥曲线的位置关系",
+      "prereq": []
+     },
+     {
+      "id": "math-chord-length",
+      "label": "弦长与面积问题",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "概率统计",
+    "topics": [
+     {
+      "id": "math-counting",
+      "label": "计数原理与排列组合",
+      "prereq": []
+     },
+     {
+      "id": "math-binomial",
+      "label": "二项式定理",
+      "prereq": []
+     },
+     {
+      "id": "math-probability-event",
+      "label": "随机事件与概率",
+      "prereq": []
+     },
+     {
+      "id": "math-conditional-prob",
+      "label": "条件概率与独立性",
+      "prereq": []
+     },
+     {
+      "id": "math-discrete-dist",
+      "label": "离散型随机变量分布列与期望",
+      "prereq": []
+     },
+     {
+      "id": "math-normal-dist",
+      "label": "正态分布",
+      "prereq": []
+     },
+     {
+      "id": "math-stat-charts",
+      "label": "统计图表与数字特征",
+      "prereq": []
+     },
+     {
+      "id": "math-regression",
+      "label": "线性回归与独立性检验",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "复数",
+    "topics": [
+     {
+      "id": "math-complex",
+      "label": "复数的运算与几何意义",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "未分类",
+    "topics": [
+     {
+      "id": "unclassified",
+      "label": "待分类",
+      "prereq": []
+     }
+    ]
+   }
+  ]
+ },
+ "english": {
+  "chapters": [
+   {
+    "name": "词汇",
+    "topics": [
+     {
+      "id": "eng-vocab-new",
+      "label": "生词（不认识）",
+      "prereq": []
+     },
+     {
+      "id": "eng-vocab-familiar",
+      "label": "熟词生义",
+      "prereq": []
+     },
+     {
+      "id": "eng-vocab-confusable",
+      "label": "易混词辨析",
+      "prereq": []
+     },
+     {
+      "id": "eng-vocab-phrase",
+      "label": "固定搭配与短语",
+      "prereq": []
+     },
+     {
+      "id": "eng-vocab-derivation",
+      "label": "词形变化（派生）",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "句子",
+    "topics": [
+     {
+      "id": "eng-sentence-long",
+      "label": "长难句结构",
+      "prereq": []
+     },
+     {
+      "id": "eng-sentence-clause",
+      "label": "从句（不细分）",
+      "prereq": []
+     },
+     {
+      "id": "eng-sentence-nonfin",
+      "label": "非谓语动词",
+      "prereq": []
+     },
+     {
+      "id": "eng-sentence-tense",
+      "label": "时态与语态",
+      "prereq": []
+     },
+     {
+      "id": "eng-sentence-subjunc",
+      "label": "虚拟语气",
+      "prereq": []
+     },
+     {
+      "id": "eng-sentence-inversion",
+      "label": "倒装与强调",
+      "prereq": []
+     },
+     {
+      "id": "eng-sentence-conj",
+      "label": "连词与逻辑关系",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "题型",
+    "topics": [
+     {
+      "id": "eng-item-cloze",
+      "label": "完形填空",
+      "prereq": []
+     },
+     {
+      "id": "eng-item-reading-detail",
+      "label": "阅读理解（细节）",
+      "prereq": []
+     },
+     {
+      "id": "eng-item-reading-infer",
+      "label": "阅读理解（推断）",
+      "prereq": []
+     },
+     {
+      "id": "eng-item-reading-main",
+      "label": "阅读理解（主旨）",
+      "prereq": []
+     },
+     {
+      "id": "eng-item-seven-five",
+      "label": "七选五",
+      "prereq": []
+     },
+     {
+      "id": "eng-item-grammar-blank",
+      "label": "语法填空",
+      "prereq": []
+     },
+     {
+      "id": "eng-item-proofread",
+      "label": "短文改错",
+      "prereq": []
+     },
+     {
+      "id": "eng-item-practical-write",
+      "label": "应用文写作",
+      "prereq": []
+     },
+     {
+      "id": "eng-item-continuation",
+      "label": "读后续写",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "其他",
+    "topics": [
+     {
+      "id": "eng-other-preposition",
+      "label": "介词",
+      "prereq": []
+     },
+     {
+      "id": "eng-other-article-num",
+      "label": "冠词与数词",
+      "prereq": []
+     },
+     {
+      "id": "eng-other-pronoun",
+      "label": "代词指代",
+      "prereq": []
+     },
+     {
+      "id": "eng-other-verb-phrase",
+      "label": "动词短语",
+      "prereq": []
+     },
+     {
+      "id": "eng-other-reoccur",
+      "label": "词汇复现（考过又忘）",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "未分类",
+    "topics": [
+     {
+      "id": "unclassified",
+      "label": "待分类",
+      "prereq": []
+     }
+    ]
+   }
+  ]
+ },
+ "chinese": {
+  "chapters": [
+   {
+    "name": "语言文字运用",
+    "topics": [
+     {
+      "id": "chn-char-phonetic",
+      "label": "字音",
+      "prereq": []
+     },
+     {
+      "id": "chn-char-form",
+      "label": "字形",
+      "prereq": []
+     },
+     {
+      "id": "chn-idiom",
+      "label": "成语与熟语",
+      "prereq": []
+     },
+     {
+      "id": "chn-illogical",
+      "label": "病句辨析与修改",
+      "prereq": []
+     },
+     {
+      "id": "chn-punctuation",
+      "label": "标点符号",
+      "prereq": []
+     },
+     {
+      "id": "chn-synonym",
+      "label": "词语辨析（近义词）",
+      "prereq": []
+     },
+     {
+      "id": "chn-rhetoric",
+      "label": "修辞手法",
+      "prereq": []
+     },
+     {
+      "id": "chn-sentence-order",
+      "label": "句子衔接与排序",
+      "prereq": []
+     },
+     {
+      "id": "chn-appropriateness",
+      "label": "语言得体",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "古诗文",
+    "topics": [
+     {
+      "id": "chn-classical-word",
+      "label": "文言实词",
+      "prereq": []
+     },
+     {
+      "id": "chn-classical-function",
+      "label": "文言虚词",
+      "prereq": []
+     },
+     {
+      "id": "chn-classical-pattern",
+      "label": "文言句式",
+      "prereq": []
+     },
+     {
+      "id": "chn-classical-translate",
+      "label": "文言翻译",
+      "prereq": []
+     },
+     {
+      "id": "chn-culture",
+      "label": "古代文化常识",
+      "prereq": []
+     },
+     {
+      "id": "chn-classical-recite",
+      "label": "古诗文默写",
+      "prereq": []
+     },
+     {
+      "id": "chn-poetry-appreciate",
+      "label": "诗歌鉴赏（意象与手法）",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "文学常识",
+    "topics": [
+     {
+      "id": "chn-author-work",
+      "label": "作家作品",
+      "prereq": []
+     },
+     {
+      "id": "chn-genre",
+      "label": "文体常识",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "其他",
+    "topics": [
+     {
+      "id": "chn-famous-quote",
+      "label": "名句名篇积累",
+      "prereq": []
+     }
+    ]
+   },
+   {
+    "name": "未分类",
+    "topics": [
+     {
+      "id": "unclassified",
+      "label": "待分类",
+      "prereq": []
+     }
+    ]
+   }
+  ]
  }
 }

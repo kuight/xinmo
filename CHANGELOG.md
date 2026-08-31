@@ -1,5 +1,17 @@
 # CHANGELOG - 错题心魔 xinmo v1
 
+## v1.3 - 补语数英知识点（纯数据，不加功能） (2026-08-31)
+
+### 新增
+- data/topics.json 补三个学科：math（62 条）、english（27 条，刻意做浅，eng-vocab-new 生词为第一条）、chinese（20 条）。
+- 按现有嵌套格式扩展（学科→chapters[]→topics[]，每条含 id/label/prereq），新 id 前缀 math-/eng-/chn-，学科键追加在末尾。
+- 代码层无需改动：web/app.js 的 SUBJ、web/i18n.json 的 subjects、server.py 的 SUBJECTS 三处本就是六科白名单；LLM 分类提示词由 _topic_catalog() 从 topics.json 动态生成，新学科自动流入。
+
+### 验收（全部通过）
+- json.load 解析成功；总条目 272（physics 51 + chemistry 56 + geography 56 + math 62 + english 27 + chinese 20）；唯一重复 id 为 unclassified（预存在的共享“待分类”回退，各学科一致，非新冲突）。
+- 三新学科各录 1 道测试题（id14/15/16，经真实 POST /api/problem），problem 表与 problems.jsonl 均核对后删除；删除后 problem 13 行（12 基线 + 测试期间并发新增的真实学生记录 id17）、jsonl 27 行，测试数据零残留。
+- test_schedule_e2e.py 全绿（interval 1/3/8.4/24.36 + review 偏移 0/1/4/12 + 第4次炼化）、check_transaction_integrity.py CLEAN（0 不一致）。
+
 ## D6.5 - 迁出为独立仓库并推送 GitHub (2026-08-29)
 
 ### 完成
