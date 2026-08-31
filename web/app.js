@@ -761,14 +761,14 @@ function buildLibraryCard(it){
   var thumbs=el('div','lib-thumbs');
   // v1.2 multi-image: render all question images then all answer images, stacked
   splitMulti(it.image_path).forEach(function(p){
-    var t=imgThumb(p);
-    if(it.image_missing){t.className='thumb missing';t.title=t('library.brokenImage');}
-    thumbs.appendChild(t);
+    var th=imgThumb(p);
+    if(it.image_missing){th.className='thumb missing';th.title=t('library.brokenImage');}
+    thumbs.appendChild(th);
   });
   splitMulti(it.answer_image_path).forEach(function(p){
-    var t=imgThumb(p);
-    if(it.answer_image_missing){t.className='thumb missing';t.title=t('library.brokenImage');}
-    thumbs.appendChild(t);
+    var th=imgThumb(p);
+    if(it.answer_image_missing){th.className='thumb missing';th.title=t('library.brokenImage');}
+    thumbs.appendChild(th);
   });
   if(thumbs.children.length)card.appendChild(thumbs);
   if(it.note){card.appendChild(el('div','note','<b>'+t('today.myNote')+':</b> '+escapeHtml(it.note)));}
