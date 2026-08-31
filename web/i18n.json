@@ -122,7 +122,7 @@
     "actRedo": "重做",
     "treeTitle": "知识树",
     "heatTitle": "修行热力图",
-    "summaryTpl": "%s：%d个知识点 已遇%d 已炼化%d",
+    "summaryTpl": "%s：%total个知识点 已遇%seen 已炼化%refined",
     "activeTpl": "活跃%d",
     "chapterSeenTpl": "已遇 %d / 共 %d",
     "streakTpl": "连续修行 %d 天",
