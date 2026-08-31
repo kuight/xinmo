@@ -22,6 +22,26 @@ textarea{min-height:70px;resize:vertical}
 .topic-item{padding:7px 10px;border-radius:6px;cursor:pointer;font-size:14px;border:1px solid transparent}
 .topic-item:hover{background:#eef4ff}
 .topic-item.active{background:#dbe9ff;border-color:#1d5fd6;font-weight:bold}
+/* v1.3: live topic search box (entry page) */
+.topic-search{margin:2px 0 10px}
+/* v1.3: per-image remove button on the entry dropzone stack */
+.img-stack{display:flex;flex-wrap:wrap;gap:8px}
+.img-stack .thumb-wrap{position:relative;display:inline-block}
+.img-stack .thumb-wrap img{max-width:160px;max-height:120px;border-radius:6px;border:1px solid #ddd;display:block}
+.img-stack .img-x{position:absolute;top:2px;right:2px;width:18px;height:18px;line-height:16px;text-align:center;background:rgba(0,0,0,.65);color:#fff;border:none;border-radius:50%;font-size:12px;cursor:pointer;padding:0}
+.img-stack .img-x:hover{background:#d64545}
+/* v1.3: today collapse rows */
+.today-progress{font-size:13px;color:#556;margin:6px 0 10px}
+.td-row{padding:10px 12px;border:1px solid #e3e8f0;border-radius:8px;margin-bottom:6px;background:#fff;cursor:pointer}
+.td-row.open{border-color:#1d5fd6;background:#f8fbff}
+.td-row-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.td-row-title{font-size:14px;color:#233;word-break:break-all}
+.td-badge{font-size:11px;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
+.td-badge.done{background:#d7f0dd;color:#1d7a3a}
+.td-badge.todo{background:#dbe9ff;color:#1d5fd6}
+.td-body{display:none;margin-top:10px;border-top:1px dashed #e3e8f0;padding-top:8px}
+.td-row.open .td-body{display:block}
+/* v1.3: keep the trace heat page pagination intact; today needs no pager */
 .card{border:1px solid #e3e8f0;border-radius:10px;padding:12px;margin-bottom:10px;background:#fff}
 .card.rebound{border-color:#f5a3a3;background:#fff5f5}
 .card h3{font-size:15px;margin-bottom:6px}

@@ -4,8 +4,18 @@
 var I18N = {};
 
 var SUBJ = ['physics','chemistry','geography','chinese','math','english'];
-var QTYPE = ['choice','fill','calc','experiment','inference','diagram','short','comprehensive'];
+// v1.3 (task 3): per-subject question types. physics unchanged (legacy 8 codes).
+// Codes are stored in the question_type TEXT column; labels live in i18n.json questionTypes.
+var QTYPES = {
+  physics:   ['choice','fill','calc','experiment','inference','diagram','short','comprehensive'],
+  chemistry: ['choice','fill','experiment','flow','organic','structure','calc','short'],
+  geography: ['choice','comprehensive','chart','location','calc','short'],
+  math:      ['single','multi','fill','solve','proof','calc'],
+  english:   ['word','sentence','cloze','reading','seven5','grammar','proofread','writing'],
+  chinese:   ['choice','recitation','classical_trans','classical_word','poetry','language','literature','short']
+};
 var ETYPE = ['concept','formula','calc','reading','stuck','incomplete','timeout','careless'];
+function qtypesFor(subj){return (QTYPES[subj]||QTYPES.physics).concat(['__custom__']);}
 var TOPICS = null;
 var selSubj = null;
 var selTopics = [];  // v1.2 multi-topic: array of selected topic ids (max 3)
@@ -51,7 +61,7 @@ function renderTabs(){
     box.appendChild(b);
   });
 }
-function setTab(n){tab=n;renderTabs();['entry','today','stats','trace','library'].forEach(function(x){document.getElementById('page-'+x).classList.toggle('active',x===n);});if(n==='entry')renderEntry();if(n==='today')renderToday();if(n==='stats')renderStats();if(n==='trace')renderTrace();if(n==='library')renderLibrary();}
+function setTab(n){tab=n;renderTabs();['entry','today','stats','trace','library'].forEach(function(x){document.getElementById('page-'+x).classList.toggle('active',x===n);});if(n==='entry')renderEntry();if(n==='today'){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;renderToday();}if(n==='stats')renderStats();if(n==='trace')renderTrace();if(n==='library')renderLibrary();}
 
 function loadTopics(cb){if(TOPICS){cb();return;}fetch('/api/topics').then(function(r){return r.json();}).then(function(d){TOPICS=d;cb();}).catch(function(){toast('topics load failed');});}
 
@@ -59,42 +69,74 @@ function loadTopics(cb){if(TOPICS){cb();return;}fetch('/api/topics').then(functi
 var classifyState=null; // null | 'running' | {subject,topic_ids,summary} | 'failed'
 var topicMode='manual';  // 'manual' shows chapter picker; 'auto' shows vision candidates
 var noteValue='';
+var topicSearch='';  // v1.3: live topic search box filter over chapter names + topic labels
+// v1.3 (task 4): persist every form field so adding an image never wipes user input.
+var formVals={source:'',note:'',answer:'',qtype:'choice',qtypeCustom:'',error:'concept',errorCustom:''};
+var topicAreaEl=null; // live reference to the topic area so it can be refreshed without rebuilding the form
+
+// v1.3 (task 2): populate the source datalist from /api/sources (most recently used first).
+function loadSourceHistory(){
+  var dl=document.getElementById('source-history');if(!dl)return;
+  fetch('/api/sources').then(function(r){return r.json();}).then(function(d){
+    if(!d.sources)return;
+    var opts=(d.sources||[]).map(function(s){var o=el('option');o.value=s;return o;});
+    dl.innerHTML='';
+    opts.forEach(function(o){dl.appendChild(o);});
+  }).catch(function(){});
+}
 
 function renderEntry(){
   var p=document.getElementById('page-entry');p.innerHTML='';
+  loadSourceHistory();  // v1.3 (task 2): refresh the source datalist once per page open
   loadTopics(function(){
     p.appendChild(el('div','muted',t('entry.pickSubject')));
     var sg=el('div','subj-group');
     SUBJ.forEach(function(s){
       var b=el('button','subj-btn'+(selSubj===s?' active':''),t('subjects.'+s,s));
-      b.onclick=function(){selSubj=s;topicMode='manual';selTopics=[];classifyState=null;noteValue='';renderEntry();};
+      b.onclick=function(){selSubj=s;topicMode='manual';selTopics=[];classifyState=null;noteValue='';formVals.source='';formVals.note='';formVals.answer='';topicSearch='';renderEntry();};
       sg.appendChild(b);
     });
     p.appendChild(sg);
     p.appendChild(el('div','muted',t('entry.pickTopic')));
-    var topicArea=el('div');p.appendChild(topicArea);
-    if(topicMode==='auto'){
-      renderCandidates(topicArea);
-    } else {
-      renderManualTopics(topicArea);
-    }
+    // v1.3: live topic search box (pure front-end filter, topics.json untouched)
+    var search=el('input');search.type='text';search.placeholder=t('entry.topicSearchPlaceholder');search.value=topicSearch;
+    search.className='topic-search';
+    search.oninput=function(){topicSearch=search.value;refreshTopicArea();};
+    p.appendChild(search);
+    topicAreaEl=el('div');p.appendChild(topicAreaEl);
+    refreshTopicArea();
     buildEntryForm(p);
   });
+}
+function refreshTopicArea(){
+  if(!topicAreaEl)return;
+  topicAreaEl.innerHTML='';
+  if(topicMode==='auto'){renderCandidates(topicAreaEl);}
+  else{renderManualTopics(topicAreaEl);}
 }
 
 function renderManualTopics(topicArea){
   topicArea.innerHTML='';
   if(selSubj){
+    var q=topicSearch.trim();
     var chs=(TOPICS[selSubj]&&TOPICS[selSubj].chapters)||[];
     chs.forEach(function(ch){
+      // v1.3: match chapter name OR any topic label (simple includes, no fuzzy)
+      var chHit=q && ch.name && ch.name.indexOf(q)>=0;
+      var shown=ch.topics.filter(function(tp){
+        return selTopics.indexOf(tp.id)>=0 || !q || tp.label.indexOf(q)>=0;  // always keep selected; else filter
+      });
+      if(q && !chHit && !shown.length)return;  // drop chapters with nothing to show during search
       var c=el('div','chapter');
       var head=el('div','chapter-head','<span>'+ch.name+'</span><span class="n">'+ch.topics.length+'</span>');
       var body=el('div','chapter-body');
-      ch.topics.forEach(function(tp){
+      shown.forEach(function(tp){
         var it=el('div','topic-item'+(selTopics.indexOf(tp.id)>=0?' active':''),tp.label);
-        it.onclick=(function(tid){return function(){toggleTopic(tid);renderEntry();};})(tp.id);
+        it.onclick=(function(tid){return function(){toggleTopic(tid);refreshTopicArea();};})(tp.id);
         body.appendChild(it);
       });
+      // v1.3: expand a chapter during search if its name matches OR any topic inside matches
+      if(q && (chHit || shown.length))c.classList.add('open');
       head.onclick=function(){c.classList.toggle('open');};
       c.appendChild(head);c.appendChild(body);topicArea.appendChild(c);
     });
@@ -123,10 +165,11 @@ function renderCandidates(topicArea){
     st.topic_ids.forEach(function(tid){
       var b=el('button','cand-chip'+(selTopics.indexOf(tid)>=0?' active':''),topicLabel(st.subject||selSubj||SUBJ[0],tid)||tid);
       b.onclick=function(){
-        if(st.subject)selSubj=st.subject;
+        // v1.3 (task 4): never overwrite a user-picked subject with LLM's; only fill empty
+        if(!selSubj&&st.subject)selSubj=st.subject;
         toggleTopic(tid);
-        if(st.summary){noteValue=st.summary;}
-        renderEntry();
+        if(st.summary&&!formVals.note&&!noteValue){noteValue=st.summary;}
+        refreshTopicArea();
       };
       chips.appendChild(b);
     });
@@ -135,21 +178,22 @@ function renderCandidates(topicArea){
     topicArea.appendChild(el('div','muted',t('entry.classifyFailed')));
   }
   var other=el('button','ghost cand-other',t('entry.candidateOther'));
-  other.onclick=function(){topicMode='manual';classifyState=null;renderEntry();};
+  other.onclick=function(){topicMode='manual';classifyState=null;refreshTopicArea();};
   topicArea.appendChild(other);
   var unc=el('button','ghost cand-unc',t('entry.candidateUnclassified'));
   unc.onclick=function(){
+    // v1.3 (task 4): only fill empty subject from LLM
     if(!selSubj&&st&&st.subject)selSubj=st.subject;
     if(!selSubj)selSubj=SUBJ[0];
     selTopics=['unclassified'];
-    if(st&&st.summary){noteValue=st.summary;}
-    renderEntry();
+    if(st&&st.summary&&!formVals.note&&!noteValue){noteValue=st.summary;}
+    refreshTopicArea();
   };
   topicArea.appendChild(unc);
 }
 
 function autoClassify(path){
-  classifyState='running';renderEntry();
+  classifyState='running';refreshTopicArea();  // v1.3 (task 4): refresh topic area only, never wipe the form
   fetch('/api/classify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image_path:path})})
     .then(function(r){return r.json();}).then(function(d){
       if(d.ok&&d.topic_ids&&d.topic_ids.length){
@@ -157,23 +201,30 @@ function autoClassify(path){
       } else {
         classifyState='failed';
       }
-      topicMode='auto';renderEntry();
-    }).catch(function(){classifyState='failed';topicMode='auto';renderEntry();});
+      topicMode='auto';refreshTopicArea();
+    }).catch(function(){classifyState='failed';topicMode='auto';refreshTopicArea();});
 }
 
 function buildEntryForm(p){
   var form=el('div');
   form.appendChild(el('label',null,t('entry.noteLabel')));
-  var note=el('textarea');note.placeholder=t('entry.notePlaceholder');note.value=noteValue||'';form.appendChild(note);
+  var note=el('textarea');note.placeholder=t('entry.notePlaceholder');note.value=formVals.note||noteValue||'';
+  note.oninput=function(){formVals.note=note.value;};form.appendChild(note);
 
   var g=el('div','grid2');
   var s1=el('div');
   s1.appendChild(el('label',null,t('entry.sourceLabel')));
-  var src=el('input');src.type='text';src.placeholder=t('entry.sourcePlaceholder');s1.appendChild(src);
-  g.appendChild(s1);
+  // v1.3 (task 2): source input backed by a datalist of recently used sources from /api/sources
+  var src=el('input');src.type='text';src.placeholder=t('entry.sourcePlaceholder');src.value=formVals.source;
+  src.setAttribute('list','source-history');
+  src.oninput=function(){formVals.source=src.value;};
+  s1.appendChild(src);g.appendChild(s1);
   var s2=el('div');
   s2.appendChild(el('label',null,t('entry.qtypeLabel')));
-  var qt=customSelect(QTYPE,'questionTypes','entry.qtypeCustom');
+  var qt=customSelect(qtypesFor(selSubj),'questionTypes','entry.qtypeCustom');
+  // preselect persisted qtype
+  (function(){var sel=qt.querySelector('select');var f=formVals.qtype;if(f&&qtypesFor(selSubj).indexOf(f)>=0){sel.value=f;}else if(f&&f!=='__custom__'){sel.value='__custom__';var ci=qt.querySelector('input');if(ci){ci.value=formVals.qtypeCustom||f;ci.parentNode.style.display='block';}}})();
+  qt.onchange=function(){var sel=qt.querySelector('select');formVals.qtype=sel.value;if(sel.value==='__custom__'){var ci=qt.querySelector('input');formVals.qtypeCustom=ci.value;}};
   s2.appendChild(qt);g.appendChild(s2);
   form.appendChild(g);
 
@@ -181,13 +232,16 @@ function buildEntryForm(p){
   form.appendChild(makeImagePicker('q'));
 
   form.appendChild(el('label',null,t('entry.answerLabel')));
-  var ans=el('input');ans.type='text';ans.placeholder=t('entry.answerPlaceholder');form.appendChild(ans);
+  var ans=el('input');ans.type='text';ans.placeholder=t('entry.answerPlaceholder');ans.value=formVals.answer;
+  ans.oninput=function(){formVals.answer=ans.value;};form.appendChild(ans);
 
   form.appendChild(el('label',null,t('entry.aImageLabel')));
   form.appendChild(makeImagePicker('a'));
 
   form.appendChild(el('label',null,t('entry.errorLabel')));
   var et=customSelect(ETYPE,'errorTypes','entry.errorCustom');
+  (function(){var sel=et.querySelector('select');var f=formVals.error;if(f&&ETYPE.indexOf(f)>=0){sel.value=f;}else if(f&&f!=='__custom__'){sel.value='__custom__';var ci=et.querySelector('input');if(ci){ci.value=formVals.errorCustom||f;ci.parentNode.style.display='block';}}})();
+  et.onchange=function(){var sel=et.querySelector('select');formVals.error=sel.value;if(sel.value==='__custom__'){var ci=et.querySelector('input');formVals.errorCustom=ci.value;}};
   form.appendChild(et);
 
   var sub=el('button','primary',t('entry.submit'));
@@ -200,7 +254,7 @@ function buildEntryForm(p){
     var body={subject:selSubj,topic:joinMulti(tids),topic_label:tlb,question_type:selValue(qt),error_type:selValue(et),note:note.value,source:src.value,answer_text:ans.value,image_path:joinMulti(entryImg.q),answer_image_path:joinMulti(entryImg.a)};
     fetch('/api/problem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
       .then(function(r){return r.json();}).then(function(d){
-        if(d.ok){toast(t('entry.added')+' #'+d.problem.id);noteValue='';note.value='';ans.value='';src.value='';selTopics=[];entryImg={q:[],a:[]};classifyState=null;topicMode='manual';renderEntry();}
+        if(d.ok){toast(t('entry.added')+' #'+d.problem.id);noteValue='';note.value='';ans.value='';src.value='';formVals={source:'',note:'',answer:'',qtype:'choice',qtypeCustom:'',error:'concept',errorCustom:''};selTopics=[];entryImg={q:[],a:[]};classifyState=null;topicMode='manual';renderEntry();}
       }).catch(function(){toast('save failed');});
   };
   form.appendChild(sub);
@@ -238,19 +292,22 @@ function makeImagePicker(kind){
       });
     });
   }
+  // v1.3 (task 5): per-image remove button on each thumbnail (replaces the old remove-all button).
   function render(){
     var arr=entryImg[kind]||[];
     if(arr.length){
       dz.className='dropzone filled';dz.innerHTML='';
       var stk=el('div','img-stack');
-      arr.forEach(function(p){
+      arr.forEach(function(p,idx){
+        var tw=el('div','thumb-wrap');
         var im=el('img');im.src=p;im.onclick=function(ev){ev.stopPropagation();showLightbox(p);};
-        stk.appendChild(im);
+        tw.appendChild(im);
+        var x=el('button','img-x','✕');
+        x.onclick=function(ev){ev.stopPropagation();entryImg[kind].splice(idx,1);render();};
+        tw.appendChild(x);
+        stk.appendChild(tw);
       });
       dz.appendChild(stk);
-      var rm=el('button','dz-remove',t('entry.removeImage'));
-      rm.onclick=function(ev){ev.stopPropagation();entryImg[kind]=[];render();};
-      dz.appendChild(rm);
       dz.appendChild(el('div','muted',tpl(t('entry.imgCount'),{n:arr.length,max:5})));
     }else{dz.className='dropzone';dz.textContent=t('entry.pasteHint');}
   }
@@ -323,7 +380,6 @@ function openCropModal(fileObj,cb){
 }
 function dataURLToBlob(d){var b=atob(d.split(',')[1]);var a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return new Blob([a],{type:'image/jpeg'});}
 
-// custom-select: built-in options + a "自定义" option that reveals a text field
 function customSelect(values,i18nPrefix,customKey){
   var wrap=el('div');
   var sel=el('select');
@@ -354,16 +410,49 @@ function renderToday(){
   fetch('/api/today').then(function(r){return r.json();}).then(function(d){renderTodayData(p,d);}).catch(function(){p.innerHTML='load failed';});
 }
 function resLabel(r){return t('today.result'+ (r.charAt(0).toUpperCase()+r.slice(1)), r);}
+
+// v1.3 (task 6): today page = collapsed rows + progress line + accordion + scroll-to-top on switch.
+var todayTotal=0, todayDone=0, todayOpen=-1;  // todayOpen = index of the currently-expanded row (-1 = none)
+
 function renderTodayData(p,d){
-  var title=el('h1',null,t('today.title')+' '+d.queue.length+' '+t('today.unit'));
-  p.appendChild(title);
+  var queue=d.queue||[];
+  todayTotal=queue.length;
+  todayDone=queue.filter(function(it){return !!(it.last_attempt&&it.last_attempt.result);}).length;
+  todayOpen=-1;
+  p.appendChild(el('h1',null,t('today.title')+' '+todayTotal+' '+t('today.unit')));
   if(d.on_the_way>0){p.appendChild(el('div','banner',t('today.onTheWay').replace('%d',d.on_the_way)));}
-  if(d.queue.length===0){p.appendChild(el('div','muted',t('today.empty')));return;}
-  d.queue.forEach(function(item){
-    p.appendChild(buildReviewCard(item));
-  });
+  if(!queue.length){p.appendChild(el('div','muted',t('today.empty')));return;}
+  // v1.3: plain-text progress line "今日 N 只 · 已完成 M 只"
+  p.appendChild(el('div','today-progress',tpl(t('today.progressTpl'),{n:todayTotal,m:todayDone})));
+  queue.forEach(function(item,idx){p.appendChild(buildCollapsibleRow(item,idx));});
 }
-function imgThumb(path){var im=el('img','thumb');im.src=path;im.onclick=function(){showLightbox(path);};return im;}
+function buildCollapsibleRow(item,idx){
+  var row=el('div','td-row');
+  var head=el('div','td-row-head');
+  var titleText=splitMulti(item.topic_label).join('、')||item.source||('#'+item.id);
+  var qtypeTxt=(item.question_type?t('questionTypes.'+item.question_type,item.question_type):'');
+  var line=escapeHtml(titleText);
+  if(item.source)line+=' <span class="tl-sep">&middot;</span> '+escapeHtml(item.source);
+  if(qtypeTxt)line+=' <span class="tl-sep">&middot;</span> '+escapeHtml(qtypeTxt);
+  head.appendChild(el('div','td-row-title',line));
+  var done=item.done||(item.last_attempt&&item.last_attempt.result)?true:false;
+  var badge=el('span','td-badge '+(done?'done':'todo'),done?t('today.statusDone'):t('today.statusTodo'));
+  head.appendChild(badge);
+  row.appendChild(head);
+  var body=el('div','td-body');
+  body.appendChild(buildReviewCard(item));
+  row.appendChild(body);
+  head.onclick=function(){
+    if(todayOpen>=0&&todayOpen!==idx){  // close previously-open row (accordion)
+      var prev=document.getElementById('page-today').querySelectorAll('.td-row')[todayOpen];
+      if(prev)prev.classList.remove('open');
+    }
+    var isOpen=row.classList.toggle('open');
+    todayOpen=isOpen?idx:(-1);
+    row.scrollIntoView({block:'nearest',behavior:'smooth'});
+  };
+  return row;
+}
 
 // D3: answer-first, judge-then. Each card is a small state machine.
 function buildReviewCard(item){
@@ -388,7 +477,17 @@ function buildReviewCard(item){
     var body={problem_id:item.id,result:result,seconds:elapsed(),my_answer:my_answer||'',judged:judged||'unknown'};
     if(extraNote)body.note=extraNote;
     fetch('/api/attempt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
-      .then(function(r){return r.json();}).then(function(){renderToday();}).catch(function(){toast('save failed');});
+      .then(function(r){return r.json();}).then(function(d){
+        if(d.ok){toast(t('entry.added')+' #'+item.id);
+          // v1.3 (task 6): mark this row done + collapse it + bump the progress counter without rebuilding
+          var row=card.closest('.td-row');if(row){row.classList.remove('open');var b=row.querySelector('.td-badge');if(b){b.className='td-badge done';b.textContent=t('today.statusDone');}var h=row.querySelector('.td-row-head');}
+          todayDone++;updateTodayProgress();
+        }else{toast('save failed');}
+      }).catch(function(){toast('save failed');});
+  }
+  function updateTodayProgress(){
+    var pg=document.getElementById('page-today').querySelector('.today-progress');
+    if(pg)pg.textContent=tpl(t('today.progressTpl'),{n:todayTotal,m:todayDone});
   }
 
   // phase 1: ask for answer
@@ -401,7 +500,6 @@ function buildReviewCard(item){
     jb.onclick=function(){doJudge(inp.value);};
     inp.onkeydown=function(e){if(e.key==='Enter'){doJudge(inp.value);}};
     acts.appendChild(jb);phase.appendChild(acts);
-    setTimeout(function(){inp.focus();},0);
   }
 
   function doJudge(my){
@@ -418,7 +516,6 @@ function buildReviewCard(item){
     reveal.appendChild(el('div','std-answer','<b>'+t('today.stdAnswer')+'</b>: '+escapeHtml(std)));
     if(v.answer_image_path){renderImageStack(reveal,v.answer_image_path);}
     if(v.hint==='unit_missing'){reveal.appendChild(el('div','muted',t('today.unitMissingHint')));}
-    // explanation shown before the self-assess buttons (item 3)
     var explBox=null;
     if(v.explanation){
       explBox=el('div','expl-box');
@@ -821,9 +918,9 @@ function buildLibraryCard(it){
       var c=el('div','chapter');c.appendChild(head);c.appendChild(body);topicSlot.appendChild(c);
     });
   }
-  var qtypeWrap=customSelect(QTYPE,'questionTypes','entry.qtypeCustom');
+  var qtypeWrap=customSelect(qtypesFor(st.subject),'questionTypes','entry.qtypeCustom');
   var errorWrap=customSelect(ETYPE,'errorTypes','entry.errorCustom');
-  preselect2(qtypeWrap,qtypeWrap.querySelector('select'),QTYPE,st.qtype);
+  preselect2(qtypeWrap,qtypeWrap.querySelector('select'),qtypesFor(st.subject),st.qtype);
   preselect2(errorWrap,errorWrap.querySelector('select'),ETYPE,st.error);
   function preselect2(wrap,sel,values,state){
     var found=false;

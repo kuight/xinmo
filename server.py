@@ -64,7 +64,11 @@ def _load_labels():
         return {}
 LABELS = _load_labels()
 SUBJECT_LABEL = LABELS.get('subject', {})
-QUESTION_TYPES = ['choice', 'fill', 'calc', 'experiment', 'inference', 'diagram', 'short', 'comprehensive']
+# v1.3 (task 3): all per-subject question-type codes (physics keeps the legacy 8).
+QUESTION_TYPES = ['choice', 'fill', 'calc', 'experiment', 'inference', 'diagram', 'short', 'comprehensive',
+                  'flow', 'organic', 'structure', 'chart', 'location', 'single', 'multi', 'solve', 'proof',
+                  'word', 'sentence', 'cloze', 'reading', 'seven5', 'grammar', 'proofread', 'writing',
+                  'recitation', 'classical_trans', 'classical_word', 'poetry', 'language', 'literature']
 ERROR_TYPES = ['concept', 'formula', 'calc', 'reading', 'stuck', 'incomplete', 'timeout', 'careless']
 ERROR_LABEL = LABELS.get('error', {})
 QUESTION_TYPE_LABEL = LABELS.get('question_type', {})
@@ -442,6 +446,19 @@ def _append_problem_jsonl(row):
             f.write(json.dumps(rec, ensure_ascii=False) + '\n')
     except Exception:
         pass  # audit failure must not block recording
+
+
+# v1.3 (task 2): distinct source values, most recently used first, capped at 20.
+# Used by the entry form's datalist for source auto-complete. Empty/whitespace excluded.
+@app.get('/api/sources')
+def sources():
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT source, MAX(created_at) AS last_used FROM problem "
+        "WHERE source IS NOT NULL AND trim(source)<>'' GROUP BY source "
+        "ORDER BY last_used DESC, id DESC LIMIT 20").fetchall()
+    conn.close()
+    return JSONResponse({'sources': [r['source'] for r in rows]})
 
 
 # ---------- library (history error-book) ----------
