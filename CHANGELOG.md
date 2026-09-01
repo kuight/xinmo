@@ -1,5 +1,41 @@
 # CHANGELOG - 错题心魔 xinmo v1
 
+## v1.4 - 移除 LLM + 新增"不会"档 + retro 分离 + 错题库分组 + 积压散开 (2026-09-01)
+
+### 背景
+今日队列已溢出：到期 17 道 > QUEUE_CAP=15，明天到期 22 道。15 道"概念不会"的题只能点 again（interval 归 0）每天占满槽位。本轮主目标是为"不会"类题提供独立处理路径，其余为附带。
+
+### 1. 移除 LLM（零风险，先做）
+- 注释三处调用点（不删代码、不改配置、保留降级分支）：`server.py` `classify_image` 内 `vision_chat`、`server.py` `explain_answer` 内 `vision_chat`、`judge.py` `_llm_equal` 内 HTTP 调用。
+- `/api/classify` 直接返回 unclassified fallback；`/api/judge` 直接返回 `judged='unknown'`，前端落在自评分支弹"我做对了/我做错了"。
+
+### 2. 新增"不会"档（主目标）
+- `result` 白名单扩为 `again|hard|good|wont`。
+- `wont` 在 `/api/attempt` 内单独分支：interval_days=3、due=today+3、streak=0、ease 不动、state 保持 active。**不修改 schedule.py**（hard 系数 1.2、REBOUND_CAP=20、QUEUE_CAP=15 均不动）。
+- 前端：`renderSelfWrong` 加"不会，先读解析"按钮（`commit('wont','',my,'wrong')`）；`renderAsk` 阶段也加（未输入答案即可直接 wont，`commit('wont','','','unknown')`）。
+
+### 3. note 与 retro 分离
+- `problem` 表 ALTER 加 `retro TEXT`（init_db 兼容老库）。
+- note 保持现状（不剧透线索，题目旁立即显示）；retro 为复盘框：录入页答案下方独立输入框，今日页折叠行与展开题目区不显示，只在自评阶段（判定提交后）与解析一起出现。
+- 录入/编辑均支持 retro 字段，错题库编辑表单新增"复盘"。
+
+### 4. 错题库分类折叠
+- 复用今日页 `buildCollapsibleRow`（`.td-row`/`.td-body` 手风琴）：按科目分组，组标题显示科目名+数量，默认折叠，点组头展开。只改渲染层。
+
+### 5. 清理
+- 删除 i18n 死键 `today.btnAgain`、`today.btnEasy`（app.js 全文零引用）。
+- 历史中文 question_type 映射待确认后改（id 13/17 流程题→flow 已定；id 24/25/26 原理题映射建议见交接报告）。
+
+### 6. 一次性散开（已备份 data/xinmo.db.bak-v1.4）
+- 现存 interval_days=0 且 due_date<=今天的 13 道题按 id 顺序散到今天起 5 天内，每天不超 4 道。
+- 验收：`count(active and due<=2026-09-01)` 16 → 7。
+
+### 验证
+- `node --check`/python ast/JSON 解析全过；e2e 测试 PASSED（interval 序列 1/3/8.4/24.36 不变）；事务完整性 CLEAN。
+- wont 实测（POST 临时题→/api/attempt result=wont→sqlite 查询）：`(30, 3.0, '2026-09-04', 0, 'active')`，ease 不变，retro 正常存取。
+- Chrome CDP 实测：错题库 4 组（物理2/化学17/地理3/数学3=25卡）默认折叠、点开一组；今日页 7 行+进度行+每行 wont 按钮、retro 不泄漏；0 JS 异常。
+- 缓存版本 bump 20260903→20260904。
+
 ## v1.3.1 - 修复今日页/错题库"加载失败" (2026-09-01)
 
 ### 根因
