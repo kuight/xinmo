@@ -73,7 +73,7 @@ var topicMode='manual';  // 'manual' shows chapter picker; 'auto' shows vision c
 var noteValue='';
 var topicSearch='';  // v1.3: live topic search box filter over chapter names + topic labels
 // v1.3 (task 4): persist every form field so adding an image never wipes user input.
-var formVals={source:'',note:'',answer:'',qtype:'choice',qtypeCustom:'',error:'concept',errorCustom:''};
+var formVals={source:'',note:'',answer:'',retro:'',qtype:'choice',qtypeCustom:'',error:'concept',errorCustom:''};
 var topicAreaEl=null; // live reference to the topic area so it can be refreshed without rebuilding the form
 
 // v1.3 (task 2): populate the source datalist from /api/sources (most recently used first).
@@ -237,6 +237,11 @@ function buildEntryForm(p){
   var ans=el('input');ans.type='text';ans.placeholder=t('entry.answerPlaceholder');ans.value=formVals.answer;
   ans.oninput=function(){formVals.answer=ans.value;};form.appendChild(ans);
 
+  // v1.4: retro (复盘) - separate input under the answer; shown only at self-judge time.
+  form.appendChild(el('label',null,t('entry.retroLabel')));
+  var retro=el('textarea');retro.placeholder=t('entry.retroPlaceholder');retro.value=formVals.retro;
+  retro.oninput=function(){formVals.retro=retro.value;};form.appendChild(retro);
+
   form.appendChild(el('label',null,t('entry.aImageLabel')));
   form.appendChild(makeImagePicker('a'));
 
@@ -253,10 +258,10 @@ function buildEntryForm(p){
     if(!entryImg.q.length){toast(t('entry.needImage'));return;}
     var tids=capArr(selTopics,3);
     var tlb=joinMulti(tids.map(function(tid){return topicLabel(selSubj,tid)||tid;}));
-    var body={subject:selSubj,topic:joinMulti(tids),topic_label:tlb,question_type:selValue(qt),error_type:selValue(et),note:note.value,source:src.value,answer_text:ans.value,image_path:joinMulti(entryImg.q),answer_image_path:joinMulti(entryImg.a)};
+    var body={subject:selSubj,topic:joinMulti(tids),topic_label:tlb,question_type:selValue(qt),error_type:selValue(et),note:note.value,retro:retro.value,source:src.value,answer_text:ans.value,image_path:joinMulti(entryImg.q),answer_image_path:joinMulti(entryImg.a)};
     fetch('/api/problem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
       .then(function(r){return r.json();}).then(function(d){
-        if(d.ok){toast(t('entry.added')+' #'+d.problem.id);noteValue='';note.value='';ans.value='';src.value='';formVals={source:'',note:'',answer:'',qtype:'choice',qtypeCustom:'',error:'concept',errorCustom:''};selTopics=[];entryImg={q:[],a:[]};classifyState=null;topicMode='manual';renderEntry();}
+        if(d.ok){toast(t('entry.added')+' #'+d.problem.id);noteValue='';note.value='';ans.value='';src.value='';formVals={source:'',note:'',answer:'',retro:'',qtype:'choice',qtypeCustom:'',error:'concept',errorCustom:''};selTopics=[];entryImg={q:[],a:[]};classifyState=null;topicMode='manual';renderEntry();}
       }).catch(function(){toast('save failed');});
   };
   form.appendChild(sub);
@@ -491,6 +496,11 @@ function buildReviewCard(item){
     var pg=document.getElementById('page-today').querySelector('.today-progress');
     if(pg)pg.textContent=tpl(t('today.progressTpl'),{n:todayTotal,m:todayDone});
   }
+  // v1.4: retro (复盘) shows only in self-judge phases, next to the explanation.
+  function retroBox(){
+    if(!item.retro)return null;
+    return el('div','retro-box','<b>'+t('today.retroLabel')+':</b> '+escapeHtml(item.retro));
+  }
 
   // phase 1: ask for answer
   function renderAsk(){
@@ -501,7 +511,12 @@ function buildReviewCard(item){
     var jb=el('button','primary',t('today.btnJudge'));
     jb.onclick=function(){doJudge(inp.value);};
     inp.onkeydown=function(e){if(e.key==='Enter'){doJudge(inp.value);}};
-    acts.appendChild(jb);phase.appendChild(acts);
+    acts.appendChild(jb);
+    // v1.4: wont available before judging - a problem you can't solve has no answer to type.
+    var wb=el('button','wont',t('today.btnWont'));
+    wb.onclick=function(){commit('wont','','','unknown');};
+    acts.appendChild(wb);
+    phase.appendChild(acts);
   }
 
   function doJudge(my){
@@ -530,6 +545,7 @@ function buildReviewCard(item){
       phase.appendChild(el('div','verdict ok',t('today.verdictCorrect')));
       phase.appendChild(reveal);
       if(explBox)phase.appendChild(explBox);
+      var rb1=retroBox();if(rb1)phase.appendChild(rb1);
       phase.appendChild(el('div','meta',t('today.afterCorrect')));
       var a1=el('div','actions');
       var g=el('button','good',t('today.btnGood'));g.onclick=function(){commit('good','',my,'correct');};
@@ -540,6 +556,7 @@ function buildReviewCard(item){
       phase.appendChild(el('div','meta',t('today.afterWrongTitle')));
       phase.appendChild(reveal);
       if(explBox)phase.appendChild(explBox);
+      var rb2=retroBox();if(rb2)phase.appendChild(rb2);
       phase.appendChild(el('label',null,t('today.wrongNoteLabel')));
       var wn=el('input');wn.type='text';wn.placeholder=t('today.wrongNotePlaceholder');phase.appendChild(wn);
       var a2=el('div','actions');
@@ -549,6 +566,7 @@ function buildReviewCard(item){
       phase.appendChild(el('div','verdict unk',t('today.verdictPartial')));
       phase.appendChild(reveal);
       if(explBox)phase.appendChild(explBox);
+      var rb3=retroBox();if(rb3)phase.appendChild(rb3);
       var a3=el('div','actions');
       var sc=el('button','good',t('today.selfCorrect'));sc.onclick=function(){renderSelfCorrect(my);};
       var sw=el('button','again',t('today.selfWrong'));sw.onclick=function(){renderSelfWrong(my);};
@@ -558,6 +576,7 @@ function buildReviewCard(item){
       phase.appendChild(el('div','verdict unk',reason));
       phase.appendChild(reveal);
       if(explBox)phase.appendChild(explBox);
+      var rb4=retroBox();if(rb4)phase.appendChild(rb4);
       var a4=el('div','actions');
       var sc4=el('button','good',t('today.selfCorrect'));sc4.onclick=function(){renderSelfCorrect(my);};
       var sw4=el('button','again',t('today.selfWrong'));sw4.onclick=function(){renderSelfWrong(my);};
@@ -570,6 +589,7 @@ function buildReviewCard(item){
     phase.innerHTML='';
     phase.appendChild(el('div','verdict ok',t('today.verdictCorrect')));
     phase.appendChild(el('div','meta',t('today.afterCorrect')));
+    var rb5=retroBox();if(rb5)phase.appendChild(rb5);
     var a=el('div','actions');
     var g=el('button','good',t('today.btnGood'));g.onclick=function(){commit('good','',my,'correct');};
     var h=el('button','hard',t('today.btnHard'));h.onclick=function(){commit('hard','',my,'correct');};
@@ -578,11 +598,16 @@ function buildReviewCard(item){
   function renderSelfWrong(my){
     phase.innerHTML='';
     phase.appendChild(el('div','verdict bad',t('today.verdictWrong')));
+    var rb6=retroBox();if(rb6)phase.appendChild(rb6);
     phase.appendChild(el('label',null,t('today.wrongNoteLabel')));
     var wn=el('input');wn.type='text';wn.placeholder=t('today.wrongNotePlaceholder');phase.appendChild(wn);
     var a=el('div','actions');
     var cb=el('button','again',t('today.btnConfirmWrong'));cb.onclick=function(){commit('again',wn.value,my,'wrong');};
-    a.appendChild(cb);phase.appendChild(a);
+    a.appendChild(cb);
+    // v1.4: wont - "不会，先读解析": reschedule +3 days instead of re-queueing to today.
+    var wb=el('button','wont',t('today.btnWont'));wb.onclick=function(){commit('wont','',my,'wrong');};
+    a.appendChild(wb);
+    phase.appendChild(a);
   }
 
   renderAsk();
@@ -840,7 +865,20 @@ function renderLibraryFilter(p){
       libData=d;
       if(!d.items||!d.items.length){list.appendChild(el('div','muted',t('library.empty')));return;}
       list.appendChild(el('div','muted',tpl(t('library.countTpl'),{n:d.items.length})));
-      d.items.forEach(function(it){list.appendChild(buildLibraryCard(it));});
+      // v1.4: group by subject, collapsible groups (reuses .td-row/.td-body accordion), default closed.
+      var groups={};
+      d.items.forEach(function(it){groups[it.subject]=(groups[it.subject]||[]).concat([it]);});
+      SUBJ.forEach(function(s){
+        var arr=groups[s];if(!arr)return;
+        var grp=el('div','td-row');
+        var head=el('div','td-row-head');
+        head.appendChild(el('div','td-row-title',t('subjects.'+s,s)+' <span class="lib-grp-count">'+arr.length+'</span>'));
+        var body=el('div','td-body');
+        arr.forEach(function(it){body.appendChild(buildLibraryCard(it));});
+        grp.appendChild(head);grp.appendChild(body);
+        head.onclick=function(){grp.classList.toggle('open');};
+        list.appendChild(grp);
+      });
     }).catch(function(){list.appendChild(el('div','muted',t('library.loadFailed')));});
 }
 function stateBadge(st){
@@ -885,7 +923,7 @@ function buildLibraryCard(it){
   var wrap=el('div','lib-editform');
   wrap.appendChild(el('h3',null,tpl(t('library.editTitle'),{n:it.id})));
   var st={subject:it.subject,topics:splitMulti(it.topic),error:it.error_type,qtype:it.question_type,
-          note:it.note||'',answer:it.answer_text||'',source:it.source||'',
+          note:it.note||'',retro:it.retro||'',answer:it.answer_text||'',source:it.source||'',
           imgQ:it.image_path||'',imgA:it.answer_image_path||''};
   wrap.appendChild(el('label',null,t('library.fieldSubject')));
   var sg=el('div','subj-group');
@@ -933,6 +971,8 @@ function buildLibraryCard(it){
   wrap.appendChild(el('label',null,t('library.fieldError')));wrap.appendChild(errorWrap);
   wrap.appendChild(el('label',null,t('library.fieldNote')));
   var noteEl=el('textarea');noteEl.value=st.note;wrap.appendChild(noteEl);
+  wrap.appendChild(el('label',null,t('library.fieldRetro')));
+  var retroEl=el('textarea');retroEl.value=st.retro;wrap.appendChild(retroEl);
   wrap.appendChild(el('label',null,t('library.fieldAnswerText')));
   var ansEl=el('input');ansEl.type='text';ansEl.value=st.answer;wrap.appendChild(ansEl);
   wrap.appendChild(el('label',null,t('library.fieldSource')));
@@ -956,7 +996,7 @@ function buildLibraryCard(it){
     var body={subject:st.subject,topic:joinMulti(tids),
       topic_label:joinMulti(tids.map(function(t){return topicLabel(st.subject,t)||t;})),
       error_type:selValue(errorWrap),question_type:selValue(qtypeWrap),
-      note:noteEl.value,answer_text:ansEl.value,source:srcEl.value,
+      note:noteEl.value,retro:retroEl.value,answer_text:ansEl.value,source:srcEl.value,
       image_path:st.imgQ||'',answer_image_path:st.imgA||''};
     if(!st.subject){toast(t('entry.noSubject'));return;}
     if(!tids.length){toast(t('entry.noTopic'));return;}

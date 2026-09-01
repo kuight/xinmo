@@ -114,6 +114,11 @@ def init_db():
       seconds INTEGER
     );
     ''')
+    # v1.4: retro column (review reflection, separate from note). Older DBs lack it.
+    try:
+        conn.execute('ALTER TABLE problem ADD COLUMN retro TEXT')
+    except sqlite3.OperationalError:
+        pass  # column already exists
     conn.commit()
     conn.close()
 
@@ -135,6 +140,7 @@ def problem_row_to_dict(r):
         'question_type': r['question_type'],
         'question_type_label': QUESTION_TYPE_LABEL.get(r['question_type'], r['question_type']),
         'note': r['note'],
+        'retro': r['retro'],
         'answer_text': r['answer_text'],
         'image_path': r['image_path'],
         'answer_image_path': r['answer_image_path'],
@@ -350,7 +356,9 @@ def classify_image(image_path):
         'Pick topic_ids ONLY from the given ids (they must exist). summary must be one short sentence.'
         % json.dumps(cat, ensure_ascii=False)
     )
-    text = vision_chat(cfg, prompt, image_path)
+    # v1.4: LLM removed - classify_image always returns the unclassified fallback.
+    # text = vision_chat(cfg, prompt, image_path)  # LLM call site (disabled)
+    text = None
     obj = _extract_json(text) or {}
     subject = obj.get('subject') or ''
     if subject not in SUBJECTS:
@@ -383,7 +391,9 @@ def explain_answer(row, my_answer):
         '"next_step":"<the very first thing to look at next time - Chinese>","advice":"<one-line optimization suggestion - Chinese>"}. '
         'STUDENT ANSWER: %s. STANDARD ANSWER: %s' % (my_answer or '', row['answer_text'] or '')
     )
-    text = vision_chat(cfg, prompt, imgs)
+    # v1.4: LLM removed - explain_answer always returns None (degrade branch preserved).
+    # text = vision_chat(cfg, prompt, imgs)  # LLM call site (disabled)
+    text = None
     obj = _extract_json(text) or {}
     verdict = obj.get('verdict')
     if verdict not in ('correct', 'wrong', 'partial'):
@@ -511,7 +521,7 @@ async def update_problem(pid: int, payload: dict):
 
     fields = {}
     for key in ('subject', 'topic', 'topic_label', 'error_type', 'question_type',
-                'note', 'answer_text', 'image_path', 'answer_image_path', 'source'):
+                'note', 'retro', 'answer_text', 'image_path', 'answer_image_path', 'source'):
         if key in payload:
             v = payload[key]
             fields[key] = v if v is not None else ''
@@ -548,6 +558,7 @@ async def create_problem(payload: dict):
     if not (question_type or '').strip():
         question_type = 'openended'
     note = payload.get('note') or ''
+    retro = payload.get('retro') or ''  # v1.4: review reflection, separate from note
     answer_text = payload.get('answer_text') or ''
     image_path = payload.get('image_path') or ''
     answer_image_path = payload.get('answer_image_path') or ''
@@ -558,10 +569,10 @@ async def create_problem(payload: dict):
 
     conn = get_db()
     cur = conn.execute(
-        'INSERT INTO problem (subject,topic,topic_label,error_type,question_type,note,answer_text,'
+        'INSERT INTO problem (subject,topic,topic_label,error_type,question_type,note,retro,answer_text,'
         'image_path,answer_image_path,source,created_at,due_date) '
-        'VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
-        (subject, topic, topic_label, error_type, question_type, note, answer_text,
+        'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        (subject, topic, topic_label, error_type, question_type, note, retro, answer_text,
          image_path, answer_image_path, source, now_iso(), today))
     pid = cur.lastrowid
     conn.commit()
@@ -618,10 +629,13 @@ async def judge_answer(payload: dict):
     cfg = load_config().get('text', {})
     verdict = jdg.judge(row['question_type'], my_answer, row['answer_text'], cfg)
     # v1.1 item 3: vision-based explanation; degrade to pure judge if vision unavailable
-    expl = explain_answer(row, my_answer)
-    judged = verdict['judged']  # correct|wrong|unknown
-    if expl is not None:
-        judged = expl['verdict']  # correct|wrong|partial
+    # v1.4: LLM removed - /api/judge always returns judged='unknown' (self-judge buttons).
+    # expl = explain_answer(row, my_answer)  # LLM call site (disabled)
+    # judged = verdict['judged']  # correct|wrong|unknown
+    # if expl is not None:
+    #     judged = expl['verdict']  # correct|wrong|partial
+    expl = None
+    judged = 'unknown'
     return JSONResponse({
         'ok': True,
         'judged': judged,           # correct|wrong|partial|unknown
@@ -643,7 +657,7 @@ async def attempt(payload: dict):
     my_answer = payload.get('my_answer') or ''
     judged = payload.get('judged') or 'unknown'
     note_add = payload.get('note') or ''  # optional "where-wrong" text
-    if result not in ('again', 'hard', 'good'):
+    if result not in ('again', 'hard', 'good', 'wont'):
         return JSONResponse({'ok': False, 'error': 'bad result'}, status_code=400)
 
     ts = now_iso()
@@ -662,7 +676,15 @@ async def attempt(payload: dict):
         (pid, ts, my_answer, judged, result, seconds))
 
     p = row_to_sched(row)
-    newp = sch.apply_result(p, result, sch.days_today())
+    # v1.4: 'wont' (不会，先读解析) - standalone branch, schedule.py untouched.
+    # interval_days=3, due=today+3, streak=0, ease unchanged, state stays active.
+    if result == 'wont':
+        newp = dict(p)
+        newp['interval_days'] = 3
+        newp['streak'] = 0
+        newp['state'] = 'active'  # ease intentionally unchanged
+    else:
+        newp = sch.apply_result(p, result, sch.days_today())
     # due_date in days
     due_i = sch.days_today() + newp['interval_days']
     # second submit today never re-appears today

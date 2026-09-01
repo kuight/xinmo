@@ -81,17 +81,19 @@ def _llm_equal(my, std, cfg):
                                  data=json.dumps(body).encode('utf-8'), method='POST')
     req.add_header('Content-Type', 'application/json')
     req.add_header('Authorization', 'Bearer ' + api_key)
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            j = json.loads(resp.read().decode('utf-8', 'replace'))
-        txt = j['choices'][0]['message']['content'].strip().upper()
-        if 'EQUAL' in txt:
-            return 'EQUAL'
-        if 'DIFF' in txt:
-            return 'DIFF'
-        return None
-    except Exception:
-        return None
+    # v1.4: LLM removed - _llm_equal always returns None (degrade branch preserved).
+    # try:
+    #     with urllib.request.urlopen(req, timeout=30) as resp:
+    #         j = json.loads(resp.read().decode('utf-8', 'replace'))
+    #     txt = j['choices'][0]['message']['content'].strip().upper()
+    #     if 'EQUAL' in txt:
+    #         return 'EQUAL'
+    #     if 'DIFF' in txt:
+    #         return 'DIFF'
+    #     return None
+    # except Exception:
+    #     return None
+    return None
 
 
 def judge_expression(my, std, cfg):
