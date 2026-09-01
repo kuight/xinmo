@@ -501,6 +501,26 @@ function buildReviewCard(item){
     if(!item.retro)return null;
     return el('div','retro-box','<b>'+t('today.retroLabel')+':</b> '+escapeHtml(item.retro));
   }
+  // v1.4.1: wont shows a read-only explanation panel first; commit happens on 读完了.
+  // Panel = answer_text + saved answer image (answer_image_path column). No new fields.
+  function renderWontPanel(my, judged){
+    phase.innerHTML='';
+    var ansTxt=(item.answer_text||'').trim();
+    var ansImgs=splitMulti(item.answer_image_path||'');
+    if(!ansTxt&&!ansImgs.length){
+      phase.appendChild(el('div','wont-empty',t('today.wontEmpty')));
+    }else{
+      var panel=el('div','wont-panel');
+      if(ansTxt){panel.appendChild(el('div','std-answer','<b>'+t('today.stdAnswer')+'</b>: '+escapeHtml(ansTxt)));}
+      if(ansImgs.length){renderImageStack(panel,item.answer_image_path);}
+      phase.appendChild(panel);
+    }
+    var acts=el('div','actions');
+    var done=el('button','primary',t('today.btnWontDone'));
+    done.onclick=function(){commit('wont','',my||'',judged);};
+    acts.appendChild(done);
+    phase.appendChild(acts);
+  }
 
   // phase 1: ask for answer
   function renderAsk(){
@@ -512,9 +532,9 @@ function buildReviewCard(item){
     jb.onclick=function(){doJudge(inp.value);};
     inp.onkeydown=function(e){if(e.key==='Enter'){doJudge(inp.value);}};
     acts.appendChild(jb);
-    // v1.4: wont available before judging - a problem you can't solve has no answer to type.
+    // v1.4.1: wont opens the read-only explanation panel first; commit on 读完了.
     var wb=el('button','wont',t('today.btnWont'));
-    wb.onclick=function(){commit('wont','','','unknown');};
+    wb.onclick=function(){renderWontPanel('','unknown');};
     acts.appendChild(wb);
     phase.appendChild(acts);
   }
@@ -604,8 +624,8 @@ function buildReviewCard(item){
     var a=el('div','actions');
     var cb=el('button','again',t('today.btnConfirmWrong'));cb.onclick=function(){commit('again',wn.value,my,'wrong');};
     a.appendChild(cb);
-    // v1.4: wont - "不会，先读解析": reschedule +3 days instead of re-queueing to today.
-    var wb=el('button','wont',t('today.btnWont'));wb.onclick=function(){commit('wont','',my,'wrong');};
+    // v1.4.1: wont opens the read-only explanation panel first; commit on 读完了.
+    var wb=el('button','wont',t('today.btnWont'));wb.onclick=function(){renderWontPanel(my,'wrong');};
     a.appendChild(wb);
     phase.appendChild(a);
   }

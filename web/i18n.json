@@ -115,6 +115,8 @@
     "btnGood": "顺畅做对",
     "btnHard": "卡了一下",
     "btnWont": "不会，先读解析",
+    "btnWontDone": "读完了",
+    "wontEmpty": "本题无解析，请翻纸质答案",
     "source": "来源",
     "topic": "考点",
     "lastResult": "上次结果",

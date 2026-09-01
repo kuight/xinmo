@@ -42,6 +42,8 @@ textarea{min-height:70px;resize:vertical}
 .td-body{display:none;margin-top:10px;border-top:1px dashed #e3e8f0;padding-top:8px}
 .td-row.open .td-body{display:block}
 .lib-grp-count{font-size:11px;color:#1d5fd6;background:#dbe9ff;padding:1px 8px;border-radius:10px;margin-left:8px}
+.wont-panel{padding:8px 0}
+.wont-empty{color:#889;font-size:13px;padding:10px 0}
 /* v1.3: keep the trace heat page pagination intact; today needs no pager */
 .card{border:1px solid #e3e8f0;border-radius:10px;padding:12px;margin-bottom:10px;background:#fff}
 .card.rebound{border-color:#f5a3a3;background:#fff5f5}

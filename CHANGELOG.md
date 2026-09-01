@@ -1,5 +1,23 @@
 # CHANGELOG - 错题心魔 xinmo v1
 
+## v1.4.1 - wont 先读解析再提交 + 题型映射修正 (2026-09-01)
+
+### 修复
+- wont 按钮缺陷：原来点"不会，先读解析"直接 commit 切下一题，从不显示解析，与文案不符。
+- 改为：点击 wont 先渲染只读解析面板（该题 answer_text + 已存解析图 answer_image_path，不新增字段），底部"读完了"按钮才执行原有 commit('wont')，排期行为完全不变（interval=3、due=today+3、streak=0、ease 不动、state=active）。
+- 空态显式提示：无 answer_text 且无解析图时显示"本题无解析，请翻纸质答案"，不渲染空白框。
+- renderAsk 与 renderSelfWrong 两处 wont 按钮行为一致。
+
+### 数据
+- id 13/17 中文 question_type"流程题"→ flow（直接 SQL 执行，已备份 data/xinmo.db.bak-v141）。
+- id 24/25/26"原理题"暂不改（待人工判定归 calc/short，题干文本随报告输出）。
+- 未来五天到期分布核查：09-01:6 / 09-02:11 / 09-03:4 / 09-04:2，均 ≤15，无需调整。
+
+### 验证
+- CDP 实测（headless Chrome）：有答案题 wont → 面板渲染"标准答案: B"+"读完了"，提交后徽标"已做"，sqlite 行 `(30, 3.0, '2026-09-04', 0, 'active')`；无解析题 wont → 渲染"本题无解析，请翻纸质答案"，无空白框；0 JS 异常。
+- e2e 测试 PASSED（interval 序列 1/3/8.4/24.36 不变）；全库 answer_text 非空 = 12；事务完整性 CLEAN。
+- 缓存版本 bump 20260904→20260905。
+
 ## v1.4 - 移除 LLM + 新增"不会"档 + retro 分离 + 错题库分组 + 积压散开 (2026-09-01)
 
 ### 背景
