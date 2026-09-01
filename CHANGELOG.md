@@ -1,5 +1,23 @@
 # CHANGELOG - 错题心魔 xinmo v1
 
+## v1.4.2 - wbapse 笔误确认（无代码缺陷）+ 题型映射全部落库 (2026-09-01)
+
+### 结论
+- v1.4.1 报告中 renderAsk 源码行的 `acts.appendChild(wbapse)` 为**报告誊写笔误**，仓库代码无此缺陷（grep `wbapse` 零匹配；实际代码 app.js:536-538 为 `wb`）。node --check 与 renderAsk 实测（面板正常渲染、0 JS 异常）双重佐证。
+
+### renderAsk 阶段 wont 实测（CDP，headless Chrome）
+- 新建未判题（renderAsk 阶段）→ 点"不会，先读解析"→ 面板渲染 `标准答案: C` + "读完了"按钮。
+- console 异常计数：0；JS exception 计数：0（另有 2 条 favicon.ico 404 资源加载记录，与功能无关）。
+
+### 数据
+- 题型映射落库：id 13→flow、17→flow（幂等）、24→calc、25→calc、26→short（判定依据：24 盖斯定律算焓变/25 速率与 K 计算归 calc；26 平衡移动方向、图像选工艺条件、催化剂机理归 short）。
+- 全库已无中文 question_type：distinct 为 calc/choice/experiment/flow/inference/multi/short/single。
+- 改动前备份 data/xinmo.db.bak-v142。
+
+### 验证
+- e2e 测试 PASSED（interval 序列 1/3/8.4/24.36 不变）；事务完整性 CLEAN（25 行，0 孤儿）。
+- 本轮无前端代码改动，无需 bump ?v=。
+
 ## v1.4.1 - wont 先读解析再提交 + 题型映射修正 (2026-09-01)
 
 ### 修复
