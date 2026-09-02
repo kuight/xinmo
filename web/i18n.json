@@ -158,7 +158,8 @@
     "retroLabel": "我的复盘",
     "kTitle": "今日条目",
     "kUnit": "条",
-    "kProgressTpl": "今日 %n 条 · 已完成 %m 条"
+    "kProgressTpl": "今日 %n 条 · 已完成 %m 条",
+    "prereqWarn": "先看前置"
   },
   "trace": {
     "todayTitle": "今日足迹",
@@ -298,6 +299,8 @@
     "popLeft": "提示",
     "popRight": "答案",
     "popDue": "下次到期",
-    "loadFailed": "知识树加载失败"
+    "loadFailed": "知识树加载失败",
+    "arrowsTpl": "前置箭头",
+    "arrowLegend": "紫虚线=前置指向"
   }
 }

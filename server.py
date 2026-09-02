@@ -686,6 +686,17 @@ def today():
         r = conn.execute('SELECT result, judged, ts FROM attempt WHERE problem_id=? ORDER BY id DESC LIMIT 1',
                          (item['id'],)).fetchone()
         d['last_attempt'] = {'result': r['result'], 'judged': r['judged'], 'ts': r['ts']} if r else None
+        # v1.10 step2: for knowledge items, list unmastered prerequisites (interval_days < 1)
+        pre = d.get('prereq_ids') or ''
+        unmastered = []
+        if pre:
+            ids = [x.strip() for x in pre.split(',') if x.strip()]
+            if ids:
+                ph = ','.join('?' * len(ids))
+                for prow in conn.execute('SELECT id, note, interval_days FROM problem WHERE id IN (%s)' % ph, ids).fetchall():
+                    if (prow['interval_days'] or 0) < 1:
+                        unmastered.append(prow['note'] or ('#' + str(prow['id'])))
+        d['prereq_unmastered'] = unmastered
         return d
 
     out = {

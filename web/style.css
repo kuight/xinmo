@@ -233,3 +233,7 @@ img.thumb{max-width:120px;max-height:90px;border-radius:6px;border:1px solid #dd
 .tree-pop{position:fixed;left:50%;top:30%;transform:translateX(-50%);background:#fff;border:1px solid #c3d0e2;border-radius:12px;padding:16px 20px;z-index:99;max-width:420px;box-shadow:0 8px 30px rgba(20,40,80,.18)}
 .tree-pop-close{position:absolute;right:10px;top:6px;cursor:pointer;color:#889;font-size:18px;font-weight:700}
 .tree-pop-label{font-size:13px;color:#233;margin:4px 0;line-height:1.5;word-break:break-all}
+
+/* v1.10 step2: prerequisite arrows + 先看前置 warning */
+.prereq-warn{display:inline-block;margin-left:8px;font-size:11px;color:#8a5ae0;background:#f0e9ff;border:1px dashed #8a5ae0;border-radius:8px;padding:1px 8px;vertical-align:middle}
+.prereq-arrow{stroke:#8a5ae0;stroke-width:1.5;stroke-dasharray:4 3}

@@ -454,6 +454,10 @@ function buildCollapsibleRow(item,idx){
   var line=escapeHtml(titleText);
   if(item.source)line+=' <span class="tl-sep">&middot;</span> '+escapeHtml(item.source);
   if(qtypeTxt)line+=' <span class="tl-sep">&middot;</span> '+escapeHtml(qtypeTxt);
+  // v1.10 step2: 先看前置 warning (hint only, does not block answering)
+  if(item.row_kind==='knowledge' && item.prereq_unmastered && item.prereq_unmastered.length){
+    line+=' <span class="prereq-warn">'+t('today.prereqWarn')+': '+escapeHtml(item.prereq_unmastered.join('、'))+'</span>';
+  }
   head.appendChild(el('div','td-row-title',line));
   var done=item.done||(item.last_attempt&&item.last_attempt.result)?true:false;
   var badge=el('span','td-badge '+(done?'done':'todo'),done?t('today.statusDone'):t('today.statusTodo'));
@@ -1141,9 +1145,17 @@ function renderTreeData(wrap,d,onlySubj){
     arrow.setAttribute('id','arw');arrow.setAttribute('markerWidth','6');arrow.setAttribute('markerHeight','6');
     arrow.setAttribute('refX','5');arrow.setAttribute('refY','3');arrow.setAttribute('orient','auto');
     var ap=document.createElementNS(NS,'path');ap.setAttribute('d','M0,0 L6,3 L0,6 z');ap.setAttribute('fill','#b8c4d6');
-    arrow.appendChild(ap);defs.appendChild(arrow);svg.appendChild(defs);
+    arrow.appendChild(ap);defs.appendChild(arrow);
+    // v1.10 step2: purple arrowhead for prerequisite edges (visually distinct from branch lines)
+    var arrow2=document.createElementNS(NS,'marker');
+    arrow2.setAttribute('id','arw2');arrow2.setAttribute('markerWidth','6');arrow2.setAttribute('markerHeight','6');
+    arrow2.setAttribute('refX','5');arrow2.setAttribute('refY','3');arrow2.setAttribute('orient','auto');
+    var ap2=document.createElementNS(NS,'path');ap2.setAttribute('d','M0,0 L6,3 L0,6 z');ap2.setAttribute('fill','#8a5ae0');
+    arrow2.appendChild(ap2);defs.appendChild(arrow2);
+    svg.appendChild(defs);
     var tiers={r:0,o:0,y:0,g:0};
     var counts={r:0,o:0,y:0,g:0};
+    var nodePos={};  // v1.10 step2: item node coordinates for prerequisite arrows
     subs.forEach(function(s){
       // subject node
       var sy=y;y+=46;
@@ -1203,6 +1215,7 @@ function renderTreeData(wrap,d,onlySubj){
             svg.appendChild(lab);
             c.style.cursor='pointer';
             c.onclick=function(){showPop(it);};
+            nodePos[it.id]={x:ix,y:iy,tag:tag,subj:s};  // v1.10 step2
             ty+=24;
           });
           if(tags[tag].length)y+=tags[tag].length*24;
@@ -1210,8 +1223,30 @@ function renderTreeData(wrap,d,onlySubj){
       });
       y+=10;
     });
+    // v1.10 step2: prerequisite arrows from prereq node to successor node (dashed purple)
+    var arrows=0, crossTag=0;
+    d.items.forEach(function(it){
+      var pre=(it.prereq_ids||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
+      var dst=nodePos[it.id];
+      if(!pre.length||!dst)return;
+      pre.forEach(function(pid){
+        var src=nodePos[pid];
+        if(!src)return;
+        var al=document.createElementNS(NS,'line');
+        al.setAttribute('x1',String(src.x));al.setAttribute('y1',String(src.y));
+        al.setAttribute('x2',String(dst.x));al.setAttribute('y2',String(dst.y));
+        al.setAttribute('stroke','#8a5ae0');al.setAttribute('stroke-width','1.5');
+        al.setAttribute('stroke-dasharray','4 3');al.setAttribute('marker-end','url(#arw2)');
+        al.setAttribute('class','prereq-arrow');
+        if(src.tag!==dst.tag){al.setAttribute('data-cross','1');crossTag++;}
+        arrows++;
+        svg.appendChild(al);
+      });
+    });
+    svg.setAttribute('data-arrows',String(arrows));
+    svg.setAttribute('data-cross',String(crossTag));
     // per-tier counter tag on legend
-    lg.appendChild(el('div','tree-count',t('tree.tierCountTpl')+' r='+counts.r+' o='+counts.o+' y='+counts.y+' g='+counts.g));
+    lg.appendChild(el('div','tree-count',t('tree.tierCountTpl')+' r='+counts.r+' o='+counts.o+' y='+counts.y+' g='+counts.g+' · '+t('tree.arrowsTpl')+' '+arrows+'('+crossTag+')'));
     wrap.appendChild(svg);
     svg.querySelectorAll('g[data-key]').forEach(function(g){
       g.onclick=function(){var k=g.getAttribute('data-key');expanded[k]=!expanded[k];paint();};
