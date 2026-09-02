@@ -517,6 +517,26 @@ def library(subject: str = '', state: str = '', q: str = ''):
     return JSONResponse({'ok': True, 'items': items})
 
 
+# ---------- kentry (v1.5 batch3: 条目库 - browse all knowledge items, read-only) ----------
+@app.get('/api/kentry')
+def kentry():
+    """List all knowledge items (kind='knowledge') with attempt stats, newest first.
+    Front-end groups by subject then tag for the 条目库 page. Read-only, no judging."""
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM problem WHERE kind='knowledge' ORDER BY id DESC").fetchall()
+    items = []
+    for r in rows:
+        d = problem_row_to_dict(r)
+        a = conn.execute(
+            'SELECT COUNT(*) AS n, MAX(result) AS last_result FROM attempt WHERE problem_id=?',
+            (r['id'],)).fetchone()
+        d['attempt_count'] = a['n']
+        d['last_result'] = a['last_result']
+        items.append(d)
+    conn.close()
+    return JSONResponse({'ok': True, 'items': items})
+
+
 @app.post('/api/problem/{pid}')
 async def update_problem(pid: int, payload: dict):
     """Update any editable field of an existing problem (replace broken image supported).

@@ -5,7 +5,8 @@
     "today": "今日",
     "stats": "统计",
     "trace": "足迹",
-    "library": "错题库"
+    "library": "错题库",
+    "kentry": "条目库"
   },
   "subjects": {
     "physics": "物理",
@@ -240,5 +241,14 @@
     "brokenImage": "（当前图片缺失，可重新上传替换）",
     "replaceImage": "替换/上传",
     "createdTpl": "录入于 %d"
+  },
+  "kentry": {
+    "title": "条目库",
+    "hint": "浏览全部知识条目：给出左列，回忆右列",
+    "left": "提示",
+    "right": "答案",
+    "tag": "标签",
+    "due": "下次到期",
+    "interval": "间隔(天)"
   }
 }

@@ -55,7 +55,7 @@ function uploadImage(fileObj,kind,cb){
 
 // ---- tabs ----
 function renderTabs(){
-  var tabs=[['entry','entry'],['today','today'],['stats','stats'],['trace','trace'],['library','library']];
+  var tabs=[['entry','entry'],['today','today'],['stats','stats'],['trace','trace'],['library','library'],['kentry','kentry']];
   var box=document.getElementById('tabs');box.innerHTML='';
   tabs.forEach(function(pair){
     var b=el('button','tab'+(tab===pair[0]?' active':''),t('tabs.'+pair[1],pair[1]));
@@ -63,7 +63,7 @@ function renderTabs(){
     box.appendChild(b);
   });
 }
-function setTab(n){tab=n;renderTabs();['entry','today','stats','trace','library'].forEach(function(x){document.getElementById('page-'+x).classList.toggle('active',x===n);});if(n==='entry')renderEntry();if(n==='today'){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;renderToday();}if(n==='stats')renderStats();if(n==='trace')renderTrace();if(n==='library')renderLibrary();}
+function setTab(n){tab=n;renderTabs();['entry','today','stats','trace','library','kentry'].forEach(function(x){document.getElementById('page-'+x).classList.toggle('active',x===n);});if(n==='entry')renderEntry();if(n==='today'){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;renderToday();}if(n==='stats')renderStats();if(n==='trace')renderTrace();if(n==='library')renderLibrary();if(n==='kentry')renderKEntry();}
 
 function loadTopics(cb){if(TOPICS){cb();return;}fetch('/api/topics').then(function(r){return r.json();}).then(function(d){TOPICS=d;cb();}).catch(function(){toast('topics load failed');});}
 
@@ -990,7 +990,58 @@ function buildLibraryCard(it){
   editBtn.onclick=(function(card,it){return function(){openEditForm(card,it);};})(card,it);
   card.appendChild(editBtn);
   return card;
-}function openEditForm(card,it){
+}
+// ---- kentry (v1.5 batch3: 条目库 - browse knowledge items grouped by subject then tag, read-only) ----
+function renderKEntry(){
+  var p=document.getElementById('page-kentry');p.innerHTML='';
+  p.appendChild(el('h2',null,t('kentry.title')));
+  p.appendChild(el('div','muted',t('kentry.hint')));
+  var list=el('div','lib-list');p.appendChild(list);
+  fetch('/api/kentry').then(function(r){return r.json();}).then(function(d){
+    if(!d.items||!d.items.length){list.appendChild(el('div','muted',t('library.empty')));return;}
+    list.appendChild(el('div','muted',tpl(t('library.countTpl'),{n:d.items.length})));
+    // group by subject (SUBJ order), then by tag; both levels collapsible via .td-row
+    var groups={};
+    d.items.forEach(function(it){
+      var g=groups[it.subject]||(groups[it.subject]={count:0,tags:{}});
+      g.count++;
+      var tg=it.topic_label||'#other';
+      (g.tags[tg]=g.tags[tg]||[]).push(it);
+    });
+    SUBJ.forEach(function(s){
+      var g=groups[s];if(!g)return;
+      var grp=el('div','td-row');
+      var head=el('div','td-row-head');
+      head.appendChild(el('div','td-row-title',t('subjects.'+s,s)+' <span class="lib-grp-count">'+g.count+'</span>'));
+      var body=el('div','td-body');
+      Object.keys(g.tags).forEach(function(tag){
+        var tagRow=el('div','td-row kentry-tagrow');
+        var tagHead=el('div','td-row-head');
+        tagHead.appendChild(el('div','td-row-title',escapeHtml(tag)+' <span class="lib-grp-count">'+g.tags[tag].length+'</span>'));
+        var tagBody=el('div','td-body');
+        g.tags[tag].forEach(function(it){tagBody.appendChild(buildKEntryCard(it));});
+        tagRow.appendChild(tagHead);tagRow.appendChild(tagBody);
+        tagHead.onclick=function(){tagRow.classList.toggle('open');};
+        body.appendChild(tagRow);
+      });
+      grp.appendChild(head);grp.appendChild(body);
+      head.onclick=function(){grp.classList.toggle('open');};
+      list.appendChild(grp);
+    });
+  }).catch(function(){list.appendChild(el('div','muted',t('library.loadFailed')));});
+}
+function buildKEntryCard(it){
+  var card=el('div','card kentry-item');
+  card.appendChild(el('div','kentry-left','<b>'+t('kentry.left')+':</b> '+escapeHtml(it.note||'')));
+  card.appendChild(el('div','kentry-right','<b>'+t('kentry.right')+':</b> '+escapeHtml(it.answer_text||'')));
+  var meta=el('div','meta');
+  meta.appendChild(el('span',null,t('kentry.tag')+': '+escapeHtml(it.topic_label||'')));
+  meta.appendChild(el('span',null,t('kentry.due')+': '+(it.due_date||'')));
+  meta.appendChild(el('span',null,t('kentry.interval')+': '+(it.interval_days||0)));
+  card.appendChild(meta);
+  return card;
+}
+function openEditForm(card,it){
   var old=card.querySelector('.lib-editform');
   if(old)old.remove();
   var wrap=el('div','lib-editform');

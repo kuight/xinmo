@@ -46,6 +46,26 @@
 - e2e 测试 PASSED（interval 序列 1/3/8.4/24.36 不变）；事务完整性 CLEAN。
 - 知识条目渲染文本验收见第三批条目库页面输出（今日队列仅 overdue 地理条目可见，化学/物理/数学条目 due 未到，由条目库页面渲染验证）。
 
+## v1.5（第三批）- 条目库页面：知识条目按 subject→tag 双层折叠浏览（只读） (2026-09-02)
+
+### 后端（server.py）
+- 新增 `GET /api/kentry`：`SELECT * FROM problem WHERE kind='knowledge' ORDER BY id DESC`，每条带 attempt_count/last_result（照抄 /api/library 组装）。
+
+### 前端（web/app.js / i18n.json / index.html / style.css）
+- renderTabs 第 6 个 tab `kentry`（导航文案"条目库"）；setTab 加 page-kentry 切换与 renderKEntry 调用。
+- renderKEntry：fetch /api/kentry → 空态用 library.empty、顶部"共 N 条"用 library.countTpl；按 subject（SUBJ 顺序）分组，组头 td-row-head + 科目 label + .lib-grp-count 条目数，默认折叠；组内再按 tag 嵌套 .td-row（tag 头=标签+计数），tag 内每条 buildKEntryCard —— 复用错题库的 .td-row/.td-body 手风琴结构，未另写一套。
+- buildKEntryCard：只读卡片，显示 提示(note) / 答案(answer_text) / 标签(topic_label) / 下次到期(due_date) / 间隔(interval_days)，样式类 .kentry-item。
+- i18n：tabs.kentry="条目库"；kentry 段 title/hint/left/right/tag/due/interval。
+- index.html 加 `#page-kentry`；缓存版本 bump ?v=20260906→20260907。
+- 约束确认：未改 schedule.py；hard 1.2 / REBOUND_CAP=20 / QUEUE_CAP=15 不变；纯渲染层，无排期/判题逻辑改动。
+
+### 验证（CDP，headless Chrome）
+- 条目库分组结构：tab 6 个（录入/今日/统计/足迹/错题库/条目库）；科目组 物理 19 / 化学 19 / 地理 20 / 数学 7，全部默认折叠（td-body display:none）。
+- 展开物理组 → tag 子组：牛顿运动定律 10、仪器读数 9（默认折叠）；展开牛顿运动定律 → 卡片完整渲染：提示/答案/标签/下次到期: 2026-09-09/间隔(天): 0。
+- 化学：提示: 除水但保留产物 → 答案: 干燥（tag 分离提纯反向速查，到期 09-06）；提示: 研磨粉碎 → 答案: 无性质差异｜…（tag 分离提纯操作，到期 09-04）。数学：提示: 换底公式 → 答案: log_a b = log_c b / log_c a…（tag 指数对数基本概念，到期 09-10）。
+- console 异常 0、JS exception 0（仅 favicon.ico 404 噪声）；页面无"加载失败"。
+- e2e 测试 PASSED（interval 序列 1/3/8.4/24.36 不变）；事务完整性 CLEAN。
+
 ## v1.4.2 - wbapse 笔误确认（无代码缺陷）+ 题型映射全部落库 (2026-09-01)
 
 ### 结论
