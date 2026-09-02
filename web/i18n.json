@@ -6,7 +6,8 @@
     "stats": "统计",
     "trace": "足迹",
     "library": "错题库",
-    "kentry": "条目库"
+    "kentry": "条目库",
+    "tree": "知识树"
   },
   "subjects": {
     "physics": "物理",
@@ -284,5 +285,19 @@
     "tagDay": "天",
     "histIv": "间隔",
     "histSk": "连对"
+  },
+  "tree": {
+    "title": "知识树",
+    "hint": "三层：科目 → 标签 → 条目。点击标签折叠/展开，点击圆点查看条目。",
+    "all": "全部",
+    "legendRed": "红=未掌握(0-1天)",
+    "legendOrange": "橙=在学(1-8天)",
+    "legendYellow": "黄=渐熟(8-24天)",
+    "legendGreen": "绿=已固化(24天+或已复习完)",
+    "tierCountTpl": "四档命中：",
+    "popLeft": "提示",
+    "popRight": "答案",
+    "popDue": "下次到期",
+    "loadFailed": "知识树加载失败"
   }
 }
