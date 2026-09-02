@@ -419,23 +419,32 @@ function renderToday(){
 function resLabel(r){return t('today.result'+ (r.charAt(0).toUpperCase()+r.slice(1)), r);}
 
 // v1.3 (task 6): today page = collapsed rows + progress line + accordion + scroll-to-top on switch.
-var todayTotal=0, todayDone=0, todayOpen=-1;  // todayOpen = index of the currently-expanded row (-1 = none)
-function todayProgressRefresh(){  // v1.5: shared by problem + knowledge cards
-  var pg=document.getElementById('page-today').querySelector('.today-progress');
-  if(pg)pg.textContent=tpl(t('today.progressTpl'),{n:todayTotal,m:todayDone});
+var todayTotalP=0, todayDoneP=0, todayTotalK=0, todayDoneK=0;  // v1.6: per-section counters
+function todayProgressRefresh(section){  // v1.6: section = 'problem' | 'knowledge'
+  var sel=section==='problem'?'.today-progress.problem':'.today-progress.knowledge';
+  var pg=document.getElementById('page-today').querySelector(sel);
+  if(!pg)return;
+  var n=section==='problem'?todayTotalP:todayTotalK;
+  var m=section==='problem'?todayDoneP:todayDoneK;
+  pg.textContent=tpl(t(section==='problem'?'today.progressTpl':'today.kProgressTpl'),{n:n,m:m});
 }
 
 function renderTodayData(p,d){
-  var queue=d.queue||[];
-  todayTotal=queue.length;
-  todayDone=queue.filter(function(it){return !!(it.last_attempt&&it.last_attempt.result);}).length;
-  todayOpen=-1;
-  p.appendChild(el('h1',null,t('today.title')+' '+todayTotal+' '+t('today.unit')));
+  var queue=d.queue||[]; var kqueue=d.kqueue||[];
+  todayTotalP=queue.length; todayDoneP=queue.filter(function(it){return !!(it.last_attempt&&it.last_attempt.result);}).length;
+  todayTotalK=kqueue.length; todayDoneK=kqueue.filter(function(it){return !!(it.last_attempt&&it.last_attempt.result);}).length;
+  p.innerHTML='';
+  p.appendChild(el('h1',null,t('today.title')+' '+todayTotalP+' '+t('today.unit')));
   if(d.on_the_way>0){p.appendChild(el('div','banner',t('today.onTheWay').replace('%d',d.on_the_way)));}
-  if(!queue.length){p.appendChild(el('div','muted',t('today.empty')));return;}
-  // v1.3: plain-text progress line "今日 N 只 · 已完成 M 只"
-  p.appendChild(el('div','today-progress',tpl(t('today.progressTpl'),{n:todayTotal,m:todayDone})));
-  queue.forEach(function(item,idx){p.appendChild(buildCollapsibleRow(item,idx));});
+  if(!queue.length&&!kqueue.length){p.appendChild(el('div','muted',t('today.empty')));return;}
+  // v1.6: two sections - problems on top, knowledge items below, each with its own progress line
+  var secP=el('div','today-section');p.appendChild(secP);
+  secP.appendChild(el('div','today-progress problem',tpl(t('today.progressTpl'),{n:todayTotalP,m:todayDoneP})));
+  queue.forEach(function(item,idx){secP.appendChild(buildCollapsibleRow(item,idx));});
+  var secK=el('div','today-section');p.appendChild(secK);
+  secK.appendChild(el('h2',null,t('today.kTitle')+' '+todayTotalK+' '+t('today.kUnit')));
+  secK.appendChild(el('div','today-progress knowledge',tpl(t('today.kProgressTpl'),{n:todayTotalK,m:todayDoneK})));
+  kqueue.forEach(function(item,idx){secK.appendChild(buildCollapsibleRow(item,idx));});
 }
 function buildCollapsibleRow(item,idx){
   var row=el('div','td-row');
@@ -455,12 +464,11 @@ function buildCollapsibleRow(item,idx){
   else{body.appendChild(buildReviewCard(item));}
   row.appendChild(body);
   head.onclick=function(){
-    if(todayOpen>=0&&todayOpen!==idx){  // close previously-open row (accordion)
-      var prev=document.getElementById('page-today').querySelectorAll('.td-row')[todayOpen];
-      if(prev)prev.classList.remove('open');
-    }
-    var isOpen=row.classList.toggle('open');
-    todayOpen=isOpen?idx:(-1);
+    // v1.6: per-section accordion (rows live in two independent sections)
+    var box=row.parentElement;
+    var openRows=box.querySelectorAll('.td-row.open');
+    for(var i=0;i<openRows.length;i++){if(openRows[i]!==row)openRows[i].classList.remove('open');}
+    row.classList.toggle('open');
     row.scrollIntoView({block:'nearest',behavior:'smooth'});
   };
   return row;
@@ -493,13 +501,9 @@ function buildReviewCard(item){
         if(d.ok){toast(t('entry.added')+' #'+item.id);
           // v1.3 (task 6): mark this row done + collapse it + bump the progress counter without rebuilding
           var row=card.closest('.td-row');if(row){row.classList.remove('open');var b=row.querySelector('.td-badge');if(b){b.className='td-badge done';b.textContent=t('today.statusDone');}var h=row.querySelector('.td-row-head');}
-          todayDone++;updateTodayProgress();
+          todayDoneP++;todayProgressRefresh('problem');  // v1.6
         }else{toast('save failed');}
       }).catch(function(){toast('save failed');});
-  }
-  function updateTodayProgress(){
-    var pg=document.getElementById('page-today').querySelector('.today-progress');
-    if(pg)pg.textContent=tpl(t('today.progressTpl'),{n:todayTotal,m:todayDone});
   }
   // v1.4: retro (复盘) shows only in self-judge phases, next to the explanation.
   function retroBox(){
@@ -654,7 +658,7 @@ function buildKnowledgeCard(item){
       .then(function(r){return r.json();}).then(function(d){
         if(d.ok){toast(t('entry.added')+' #'+item.id);
           var row=card.closest('.td-row');if(row){row.classList.remove('open');var b=row.querySelector('.td-badge');if(b){b.className='td-badge done';b.textContent=t('today.statusDone');}}
-          todayDone++;todayProgressRefresh();
+          todayDoneK++;todayProgressRefresh('knowledge');  // v1.6
         }else{toast('save failed');}
       }).catch(function(){toast('save failed');});
   }

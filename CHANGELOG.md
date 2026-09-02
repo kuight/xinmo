@@ -66,6 +66,28 @@
 - console 异常 0、JS exception 0（仅 favicon.ico 404 噪声）；页面无"加载失败"。
 - e2e 测试 PASSED（interval 序列 1/3/8.4/24.36 不变）；事务完整性 CLEAN。
 
+## v1.6 - 今日队列分区分流：题目 15 只 / 条目 8 条独立计数 (2026-09-02)
+
+### 排期（schedule.py，仅改 build_today 分桶）
+- 新增常量 `KNOWLEDGE_CAP = 8`：知识条目独立队列，与题目 QUEUE_CAP=15 互不挤占；溢出各自独立顺延（次日变 overdue 再进本队列）。
+- `build_today` 返回 4 元组 `(queue, kqueue, rebound_list, on_the_way)`：queue=题目（row_kind≠knowledge，cap 15），kqueue=知识（row_kind==knowledge，cap 8）。rebound 各自算（REBOUND_CAP=20 不变，题目在前），on_the_way 相加。
+- **apply_result / 所有间隔计算零改动**；hard 系数 1.2、REBOUND_CAP=20 保持不变。
+
+### 后端（server.py）
+- today() 解包 4 元组，响应新增 `kqueue`；queue 现仅含题目。
+
+### 前端（web/app.js / i18n.json / style.css）
+- 今日页拆两区：上区"今日题目 N 只"（h1，进度行 .today-progress.problem），下区"今日条目 N 条"（h2 + 进度行 .today-progress.knowledge，位于题目区下方）；两区都空显示"今天清空了"。
+- 计数变量拆分 todayTotalP/DoneP 与 todayTotalK/DoneK；todayProgressRefresh(section) 按区刷新；buildReviewCard commit 走 problem 区、buildKnowledgeCard commit 走 knowledge 区。
+- 折叠手风琴改按区独立（不再用全局 todayOpen 索引）。
+- i18n：today.title→"今日题目"、empty→"今天清空了"，新增 kTitle/kUnit/kProgressTpl；style.css 加 .today-section 与两色进度行。
+- 缓存版本 bump ?v=20260907。
+
+### 验证
+- /api/today：queue=15（题目满）、kqueue=8（知识满），kind 分流正确。
+- CDP 实测：h1"今日题目 15 只"；上区进度"今日 15 只 · 已完成 13 只"（15 行）；下区 h2"今日条目 8 条"、进度"今日 8 条 · 已完成 0 条"（8 行）；知识卡片渲染正常；console 异常 0（仅资源 404 噪声）。
+- e2e 测试 PASSED（interval 序列 1/3/8.4/24.36 不变）；事务完整性 CLEAN；test_schedule_sim.py 解包同步为 4 元组并运行通过。
+
 ## v1.4.2 - wbapse 笔误确认（无代码缺陷）+ 题型映射全部落库 (2026-09-01)
 
 ### 结论

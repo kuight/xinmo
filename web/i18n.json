@@ -107,13 +107,13 @@
     "classifyFailed": "识别失败，已设为待分类"
   },
   "today": {
-    "title": "今日心魔",
+    "title": "今日题目",
     "unit": "只",
     "progressTpl": "今日 %n 只 · 已完成 %m 只",
     "statusDone": "已做",
     "statusTodo": "未做",
     "onTheWay": "另有 %d 只心魔在途",
-    "empty": "今日已清心",
+    "empty": "今天清空了",
     "btnGood": "顺畅做对",
     "btnHard": "卡了一下",
     "btnWont": "不会，先读解析",
@@ -154,7 +154,10 @@
     "explainPrompt": "下面是解说，看完再评价自己这次的表现",
     "explainRetry": "识别失败，以下仅供自评",
     "myNote": "我的批注",
-    "retroLabel": "我的复盘"
+    "retroLabel": "我的复盘",
+    "kTitle": "今日条目",
+    "kUnit": "条",
+    "kProgressTpl": "今日 %n 条 · 已完成 %m 条"
   },
   "trace": {
     "todayTitle": "今日足迹",

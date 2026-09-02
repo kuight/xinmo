@@ -71,7 +71,7 @@ many = []
 for i in range(30):
     q = fresh(pid=i); q['due_date'] = 5; q['interval_days'] = 0  # all new due day5
     many.append(q)
-queue, reb, otw = sch.build_today(many, 5)
+queue, kq, reb, otw = sch.build_today(many, 5)
 check('queue capped at 15', len(queue) == 15)
 
 print('=== rebound cap 20 + scatter ===')
@@ -79,7 +79,7 @@ rbs = []
 for i in range(25):
     q = fresh(pid=100 + i); q['due_date'] = 0  # overdue by 30 -> rebound
     rbs.append(q)
-queue, reb, otw = sch.build_today(rbs, 30)
+queue, kq, reb, otw = sch.build_today(rbs, 30)
 check('rebound list <=20', len(reb) <= 20)
 check('overflow scattered on_the_way=5', otw == 5)
 
@@ -91,7 +91,7 @@ for i, q in enumerate(pool):
     q['due_date'] = i % 4
 for day in range(30):
     sch.apply_rebound_penalties(pool, day)
-    queue, reb, otw = sch.build_today(pool, day)
+    queue, kq, reb, otw = sch.build_today(pool, day)
     for item in queue:
         # simulate a user: 60% good, 25% hard, 15% again
         r = random.random()

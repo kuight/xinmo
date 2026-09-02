@@ -655,7 +655,7 @@ def today():
             conn.execute('UPDATE problem SET rebound_at=?, ease=?, interval_days=?, due_date=? WHERE id=?',
                          (sch.i2d(p['rebound_at']), p['ease'], p['interval_days'], sch.i2d(p['due_date']), p['id']))
     conn.commit()
-    queue, rebound_list, on_the_way = sch.build_today(problems, today_i)
+    queue, kqueue, rebound_list, on_the_way = sch.build_today(problems, today_i)
 
     def enrich(item):
         d = sched_to_json(item)
@@ -667,7 +667,8 @@ def today():
 
     out = {
         'date': sch.i2d(today_i),
-        'queue': [enrich(q) for q in queue],
+        'queue': [enrich(q) for q in queue],      # v1.6: problems only
+        'kqueue': [enrich(q) for q in kqueue],    # v1.6: knowledge items only
         'rebound': [enrich(q) for q in rebound_list],
         'on_the_way': on_the_way,
     }

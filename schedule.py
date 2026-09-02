@@ -6,6 +6,7 @@ EASE_MIN = 1.3
 EASE_MAX = 3.0
 INTERVAL_MAX = 60
 QUEUE_CAP = 15
+KNOWLEDGE_CAP = 8  # v1.6: knowledge items get their own queue, counted independently
 REBOUND_CAP = 20
 
 
@@ -76,46 +77,55 @@ def apply_rebound_penalties(problems, today_days):
 def build_today(problems, today_days):
     """Build today's queue.
 
-    Returns (queue, rebound_list, on_the_way).
-    queue: list of dicts (problem data + kind), capped at QUEUE_CAP.
-    rebound_list: active rebounds occupying slots (<=REBOUND_CAP).
+    Returns (queue, kqueue, rebound_list, on_the_way).
+    queue: problem rows (row_kind != 'knowledge'), capped at QUEUE_CAP.
+    kqueue: knowledge rows (row_kind == 'knowledge'), capped at KNOWLEDGE_CAP.
+    rebound_list: active rebounds occupying slots (<=REBOUND_CAP, problems first).
     on_the_way: count of rebounds scattered to future days (>REBOUND_CAP).
+    The two queues are counted independently - problems never steal knowledge
+    slots and vice versa; overflow on either side just waits for the next day
+    (it becomes overdue and re-enters its own queue). Bucket key ('rebound'/
+    'overdue'/'due'/'new') is stored on each item as item['kind'] for the UI.
     """
     import random
     active = [p for p in problems if p.get('state') == 'active']
-    rebound = [p for p in active if is_rebound(p, today_days)]
-    rebound.sort(key=lambda x: x['due_date'])
+    problems_l = [p for p in active if p.get('row_kind') != 'knowledge']
+    knowledge_l = [p for p in active if p.get('row_kind') == 'knowledge']
 
-    on_the_way = 0
-    if len(rebound) > REBOUND_CAP:
-        excess = rebound[REBOUND_CAP:]
-        rebound = rebound[:REBOUND_CAP]
-        for p in excess:
-            p['due_date'] = today_days + random.randint(2, 5)
-        on_the_way = len(excess)
+    def build(plist, cap):
+        rebound = [p for p in plist if is_rebound(p, today_days)]
+        rebound.sort(key=lambda x: x['due_date'])
+        on_the_way = 0
+        if len(rebound) > REBOUND_CAP:
+            excess = rebound[REBOUND_CAP:]
+            rebound = rebound[:REBOUND_CAP]
+            for p in excess:
+                p['due_date'] = today_days + random.randint(2, 5)
+            on_the_way = len(excess)
+        buckets = {
+            'rebound': rebound,
+            'overdue': [p for p in plist if p['due_date'] < today_days and not is_rebound(p, today_days)],
+            'due': [p for p in plist if p['due_date'] == today_days and p['interval_days'] > 0],
+            'new': [p for p in plist if p['due_date'] == today_days and p['interval_days'] == 0],
+        }
+        queue = []
+        seen = set()
+        for bucket_key in ['rebound', 'overdue', 'due', 'new']:
+            for p in buckets[bucket_key]:
+                pid = p['id']
+                if pid in seen:
+                    continue
+                seen.add(pid)
+                item = dict(p)
+                item['kind'] = bucket_key
+                queue.append(item)
+                if len(queue) >= cap:
+                    return queue, rebound, on_the_way
+        return queue, rebound, on_the_way
 
-    buckets = {
-        'rebound': rebound,
-        'overdue': [p for p in active if p['due_date'] < today_days and not is_rebound(p, today_days)],
-        'due': [p for p in active if p['due_date'] == today_days and p['interval_days'] > 0],
-        'new': [p for p in active if p['due_date'] == today_days and p['interval_days'] == 0],
-    }
-    kind_for = {'rebound': 'rebound', 'overdue': 'overdue', 'due': 'due', 'new': 'new'}
-
-    queue = []
-    seen = set()
-    for bucket_key in ['rebound', 'overdue', 'due', 'new']:
-        for p in buckets[bucket_key]:
-            pid = p['id']
-            if pid in seen:
-                continue
-            seen.add(pid)
-            item = dict(p)
-            item['kind'] = bucket_key
-            queue.append(item)
-            if len(queue) >= QUEUE_CAP:
-                return queue, rebound, on_the_way
-    return queue, rebound, on_the_way
+    q_queue, q_rebound, q_otw = build(problems_l, QUEUE_CAP)
+    k_queue, k_rebound, k_otw = build(knowledge_l, KNOWLEDGE_CAP)
+    return q_queue, k_queue, q_rebound + k_rebound, q_otw + k_otw
 
 
 def days_today():

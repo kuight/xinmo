@@ -193,3 +193,9 @@ img.thumb{max-width:120px;max-height:90px;border-radius:6px;border:1px solid #dd
 .kentry-item .meta span+span::before{content:00b7;margin-right:10px;color:#b8c2d4}
 .kentry-tagrow{margin-left:16px;background:#fbfcff}
 .kentry-tagrow .td-body{padding-left:8px}
+
+/* v1.6: today page sections (problems on top, knowledge below) */
+.today-section{margin-bottom:14px}
+.today-section h2{font-size:16px;color:#233;margin:6px 0 4px}
+.today-progress.problem{color:#1d5fd6}
+.today-progress.knowledge{color:#8a5a00}
