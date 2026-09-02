@@ -133,6 +133,11 @@ def init_db():
         conn.execute('ALTER TABLE attempt ADD COLUMN streak INTEGER')
     except sqlite3.OperationalError:
         pass  # column already exists
+    # v1.10: prereq_ids column - comma-separated prerequisite knowledge item ids (step 1: data only)
+    try:
+        conn.execute("ALTER TABLE problem ADD COLUMN prereq_ids TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass  # column already exists
     conn.commit()
     conn.close()
 
@@ -167,6 +172,7 @@ def problem_row_to_dict(r):
         'state': r['state'],
         'rebound_at': r['rebound_at'],
         'kind': r['kind'],
+        'prereq_ids': r['prereq_ids'] if 'prereq_ids' in r.keys() else '',  # v1.10 step1
     }
 
 
