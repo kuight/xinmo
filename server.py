@@ -601,18 +601,18 @@ async def create_knowledge(payload: dict):
     tag = payload.get('tag', '') or 'knowledge'
     left = payload.get('left', '') or ''
     right = payload.get('right', '') or ''
+    due = payload.get('due_date', '') or sch.i2d(sch.days_today())  # v1.5b2: optional first due date (spread batch)
     if not subject.strip():
         return JSONResponse({'ok': False, 'error': 'subject required'}, status_code=400)
     if not (left.strip() and right.strip()):
         return JSONResponse({'ok': False, 'error': 'left and right required'}, status_code=400)
-    today = sch.i2d(sch.days_today())
     conn = get_db()
     cur = conn.execute(
         'INSERT INTO problem (subject,topic,topic_label,error_type,question_type,note,retro,answer_text,'
         'image_path,answer_image_path,source,created_at,due_date,kind) '
         'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         (subject, 'knowledge', tag, 'concept', 'knowledge', left, '', right,
-         '', '', tag, now_iso(), today, 'knowledge'))
+         '', '', tag, now_iso(), due, 'knowledge'))
     pid = cur.lastrowid
     conn.commit()
     row = conn.execute('SELECT * FROM problem WHERE id=?', (pid,)).fetchone()
