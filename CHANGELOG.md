@@ -1,5 +1,35 @@
 # CHANGELOG - 错题心魔 xinmo v1
 
+## v1.5（第一批）- 知识条目类型：进复习队列、无判题、自评 (2026-09-02)
+
+### 方案决策
+- 复用 problem 表 + `kind` 列区分 'problem'/'knowledge'（不新建表）。理由：schedule.py 排期函数全部作用于 problem 行，复用 = 今日队列/attempt/e2e 零改动；无孤儿 attempt、无队列合并。
+
+### 建表/改表语句
+- `ALTER TABLE problem ADD COLUMN kind TEXT DEFAULT 'problem'`（server.py init_db try/except 内执行，老库兼容）。
+
+### 后端（server.py）
+- init_db 加 kind 列 ALTER；problem_row_to_dict 返回加 'kind'。
+- 新增 `POST /api/knowledge`：subject/tag/left/right → INSERT problem（topic='knowledge'、topic_label=tag、error_type='concept'、question_type='knowledge'、note=left、answer_text=right、source=tag、due_date=今天、kind='knowledge'），写 jsonl 审计。
+- /api/library 与 /api/stats 全部统计加 `AND kind='problem'`（错题库与统计只算题目）。
+- **row_to_sched 加 `row_kind` 键**：修复 schedule.build_today 用 `item['kind']=bucket_key`（overdue/due/new/rebound）覆盖 DB kind 导致的冲突——今日队列里知识条目曾误走 buildReviewCard。
+
+### 前端（web/app.js / i18n.json / index.html）
+- todayProgressRefresh() 共享今日进度行刷新（buildReviewCard 与 buildKnowledgeCard 共用）。
+- buildCollapsibleRow：知识条目行标题显示左列（note）；body 按 `row_kind==='knowledge'` 走 buildKnowledgeCard。
+- buildKnowledgeCard：meta"知识: tag" + h3 左列；phase1 提示"给出左列，回忆右列，然后自评"+ 自评按钮[我做对了/我做错了]（无 wont、无输入、无判定）；phase2 揭右列（"答案: answer_text"）+ 对→[顺畅做对/卡了一下]、错→[记下，排回今天再练]；commit POST /api/attempt {judged:'self'}，成功后收起行、徽标"已做"、todayDone++。
+- i18n today 段加 kTag/kRecall/kAnswer；questionTypes 加 knowledge:"知识条目"。
+- 缓存版本 bump ?v=20260906。
+
+### 数据
+- 备份 data/xinmo.db.bak-v15（改库前）。
+- 20 条地理知识条目已入库（id 31-50）：tag=农业区位因果模板 18 条（自然类 10 + 人文类 8）、tag=地理答题规则 2 条。subject=geography、interval_days=0、due_date=2026-09-01、state=active。
+
+### 验证
+- CDP 实测（headless Chrome）今日队列知识条目：行标题=左列提示（"纬度低热量充足 · 农业区位因果模板 · 知识条目"）；展开 phase1 显示"给出左列，回忆右列，然后自评"+[我做对了/我做错了]；点"我做错了"→ phase2 揭"答案: 生长期长可一年多熟产量高"+[记下，排回今天再练]；commit 后行收起、徽标"已做"、进度行 5→6；console 异常 0（仅 favicon.ico 404 噪声）。
+- e2e 测试 PASSED（interval 序列 1/3/8.4/24.36、REVIEW_OFFSETS 0/1/4/12、refined on 4th good）；事务完整性 CLEAN。
+- 校验：node --check web/app.js、ast 解析 server.py、json 解析 i18n.json 全过。
+
 ## v1.4.2 - wbapse 笔误确认（无代码缺陷）+ 题型映射全部落库 (2026-09-01)
 
 ### 结论

@@ -56,7 +56,8 @@
     "classical_word": "文言实词",
     "poetry": "诗歌赏析",
     "language": "语言运用",
-    "literature": "文学常识"
+    "literature": "文学常识",
+    "knowledge": "知识条目"
   },
   "entry": {
     "pickSubject": "1 选学科",
@@ -117,6 +118,9 @@
     "btnWont": "不会，先读解析",
     "btnWontDone": "读完了",
     "wontEmpty": "本题无解析，请翻纸质答案",
+    "kTag": "知识",
+    "kRecall": "给出左列，回忆右列，然后自评",
+    "kAnswer": "答案",
     "source": "来源",
     "topic": "考点",
     "lastResult": "上次结果",

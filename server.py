@@ -119,6 +119,11 @@ def init_db():
         conn.execute('ALTER TABLE problem ADD COLUMN retro TEXT')
     except sqlite3.OperationalError:
         pass  # column already exists
+    # v1.5: kind column - 'problem' (default) vs 'knowledge' (知识条目). Older DBs lack it.
+    try:
+        conn.execute('ALTER TABLE problem ADD COLUMN kind TEXT DEFAULT \'problem\'')
+    except sqlite3.OperationalError:
+        pass  # column already exists
     conn.commit()
     conn.close()
 
@@ -152,12 +157,16 @@ def problem_row_to_dict(r):
         'streak': r['streak'],
         'state': r['state'],
         'rebound_at': r['rebound_at'],
+        'kind': r['kind'],
     }
 
 
 def row_to_sched(r):
     """Convert a sqlite Row to a dict usable by schedule.py (dates as int days)."""
     d = problem_row_to_dict(r)
+    # v1.5: schedule.build_today overwrites item['kind'] with its bucket key
+    # (overdue/due/new/rebound), so keep the DB kind under row_kind for the UI.
+    d['row_kind'] = d['kind']
     d['due_date'] = sch.d2i(d['due_date'])
     return d
 
@@ -477,7 +486,7 @@ def library(subject: str = '', state: str = '', q: str = ''):
     """List all problems (any state) with attempt stats. Optional filters:
     subject code, state (active/refined), and text q matching topic_label/source/answer_text/note."""
     conn = get_db()
-    sql = 'SELECT * FROM problem WHERE 1=1'
+    sql = "SELECT * FROM problem WHERE kind='problem'"
     args = []
     if subject:
         sql += ' AND subject=?'
@@ -574,6 +583,36 @@ async def create_problem(payload: dict):
         'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
         (subject, topic, topic_label, error_type, question_type, note, retro, answer_text,
          image_path, answer_image_path, source, now_iso(), today))
+    pid = cur.lastrowid
+    conn.commit()
+    row = conn.execute('SELECT * FROM problem WHERE id=?', (pid,)).fetchone()
+    _append_problem_jsonl(row)
+    conn.close()
+    return JSONResponse({'ok': True, 'problem': problem_row_to_dict(row)})
+
+
+# ---------- knowledge (v1.5: 知识条目) ----------
+# Knowledge items are stored in the problem table with kind='knowledge' so they share
+# the review queue and schedule.py untouched. Fields: note=left column (提示),
+# answer_text=right column (答案), topic_label=tag. No image, no judging.
+@app.post('/api/knowledge')
+async def create_knowledge(payload: dict):
+    subject = payload.get('subject', '')
+    tag = payload.get('tag', '') or 'knowledge'
+    left = payload.get('left', '') or ''
+    right = payload.get('right', '') or ''
+    if not subject.strip():
+        return JSONResponse({'ok': False, 'error': 'subject required'}, status_code=400)
+    if not (left.strip() and right.strip()):
+        return JSONResponse({'ok': False, 'error': 'left and right required'}, status_code=400)
+    today = sch.i2d(sch.days_today())
+    conn = get_db()
+    cur = conn.execute(
+        'INSERT INTO problem (subject,topic,topic_label,error_type,question_type,note,retro,answer_text,'
+        'image_path,answer_image_path,source,created_at,due_date,kind) '
+        'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        (subject, 'knowledge', tag, 'concept', 'knowledge', left, '', right,
+         '', '', tag, now_iso(), today, 'knowledge'))
     pid = cur.lastrowid
     conn.commit()
     row = conn.execute('SELECT * FROM problem WHERE id=?', (pid,)).fetchone()
@@ -709,17 +748,17 @@ async def attempt(payload: dict):
 @app.get('/api/stats')
 def stats():
     conn = get_db()
-    total = conn.execute('SELECT COUNT(*) FROM problem').fetchone()[0]
-    refined = conn.execute("SELECT COUNT(*) FROM problem WHERE state='refined'").fetchone()[0]
-    active = conn.execute("SELECT COUNT(*) FROM problem WHERE state='active'").fetchone()[0]
-    by_subject = {s: conn.execute('SELECT COUNT(*) FROM problem WHERE subject=? AND state=?', (s, 'active')).fetchone()[0] for s in SUBJECTS}
-    by_error = {e: conn.execute('SELECT COUNT(*) FROM problem WHERE error_type=? AND state=?', (e, 'active')).fetchone()[0] for e in ERROR_TYPES}
+    total = conn.execute("SELECT COUNT(*) FROM problem WHERE kind='problem'").fetchone()[0]
+    refined = conn.execute("SELECT COUNT(*) FROM problem WHERE kind='problem' AND state='refined'").fetchone()[0]
+    active = conn.execute("SELECT COUNT(*) FROM problem WHERE kind='problem' AND state='active'").fetchone()[0]
+    by_subject = {s: conn.execute("SELECT COUNT(*) FROM problem WHERE kind='problem' AND subject=? AND state=?", (s, 'active')).fetchone()[0] for s in SUBJECTS}
+    by_error = {e: conn.execute("SELECT COUNT(*) FROM problem WHERE kind='problem' AND error_type=? AND state=?", (e, 'active')).fetchone()[0] for e in ERROR_TYPES}
     # last 14 days activity
     today_i = sch.days_today()
     daily = []
     for off in range(13, -1, -1):
         day = sch.i2d(today_i - off)
-        added = conn.execute('SELECT COUNT(*) FROM problem WHERE substr(created_at,1,10)=?', (day,)).fetchone()[0]
+        added = conn.execute("SELECT COUNT(*) FROM problem WHERE kind='problem' AND substr(created_at,1,10)=?", (day,)).fetchone()[0]
         redone = conn.execute('SELECT COUNT(*) FROM attempt WHERE substr(ts,1,10)=?', (day,)).fetchone()[0]
         daily.append({'date': day, 'added': added, 'redone': redone})
     conn.close()

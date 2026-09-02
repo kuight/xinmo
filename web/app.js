@@ -420,6 +420,10 @@ function resLabel(r){return t('today.result'+ (r.charAt(0).toUpperCase()+r.slice
 
 // v1.3 (task 6): today page = collapsed rows + progress line + accordion + scroll-to-top on switch.
 var todayTotal=0, todayDone=0, todayOpen=-1;  // todayOpen = index of the currently-expanded row (-1 = none)
+function todayProgressRefresh(){  // v1.5: shared by problem + knowledge cards
+  var pg=document.getElementById('page-today').querySelector('.today-progress');
+  if(pg)pg.textContent=tpl(t('today.progressTpl'),{n:todayTotal,m:todayDone});
+}
 
 function renderTodayData(p,d){
   var queue=d.queue||[];
@@ -436,7 +440,7 @@ function renderTodayData(p,d){
 function buildCollapsibleRow(item,idx){
   var row=el('div','td-row');
   var head=el('div','td-row-head');
-  var titleText=splitMulti(item.topic_label).join('、')||item.source||('#'+item.id);
+  var titleText=(item.row_kind==='knowledge')?(item.note||item.topic_label):(splitMulti(item.topic_label).join('、')||item.source||('#'+item.id));
   var qtypeTxt=(item.question_type?t('questionTypes.'+item.question_type,item.question_type):'');
   var line=escapeHtml(titleText);
   if(item.source)line+=' <span class="tl-sep">&middot;</span> '+escapeHtml(item.source);
@@ -447,7 +451,8 @@ function buildCollapsibleRow(item,idx){
   head.appendChild(badge);
   row.appendChild(head);
   var body=el('div','td-body');
-  body.appendChild(buildReviewCard(item));
+  if(item.row_kind==='knowledge'){body.appendChild(buildKnowledgeCard(item));}  // v1.5
+  else{body.appendChild(buildReviewCard(item));}
   row.appendChild(body);
   head.onclick=function(){
     if(todayOpen>=0&&todayOpen!==idx){  // close previously-open row (accordion)
@@ -634,6 +639,54 @@ function buildReviewCard(item){
   return card;
 }
 function escapeHtml(s){return (''+s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// v1.5: knowledge card - "给出左列，回忆右列", self-judge only (no input/judge/wont).
+function buildKnowledgeCard(item){
+  var card=el('div','card kcard'+(item.state==='refined'?' refined':''));
+  var startTs=Date.now();
+  card.appendChild(el('div','meta',t('today.kTag')+': '+escapeHtml(item.topic_label||item.source||'')));
+  card.appendChild(el('h3',null,escapeHtml(item.note||'')));
+  var phase=el('div');card.appendChild(phase);
+  function elapsed(){return Math.round((Date.now()-startTs)/1000);}
+  function commit(result){
+    var body={problem_id:item.id,result:result,seconds:elapsed(),my_answer:'',judged:'self'};
+    fetch('/api/attempt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){return r.json();}).then(function(d){
+        if(d.ok){toast(t('entry.added')+' #'+item.id);
+          var row=card.closest('.td-row');if(row){row.classList.remove('open');var b=row.querySelector('.td-badge');if(b){b.className='td-badge done';b.textContent=t('today.statusDone');}}
+          todayDone++;todayProgressRefresh();
+        }else{toast('save failed');}
+      }).catch(function(){toast('save failed');});
+  }
+  // phase 1: recall the right column from the left, then self-judge
+  function renderRecall(){
+    phase.innerHTML='';
+    phase.appendChild(el('div','muted',t('today.kRecall')));
+    var acts=el('div','actions');
+    var g=el('button','good',t('today.selfCorrect'));g.onclick=function(){renderResult('good');};
+    var w=el('button','again',t('today.selfWrong'));w.onclick=function(){renderResult('again');};
+    acts.appendChild(g);acts.appendChild(w);phase.appendChild(acts);
+  }
+  // phase 2: reveal the right column, pick the final result
+  function renderResult(judge){
+    phase.innerHTML='';
+    var box=el('div','reveal-box');
+    box.appendChild(el('div','std-answer','<b>'+t('today.kAnswer')+'</b>: '+escapeHtml(item.answer_text||'')));
+    phase.appendChild(box);
+    var acts=el('div','actions');
+    if(judge==='good'){
+      var g=el('button','good',t('today.btnGood'));g.onclick=function(){commit('good');};
+      var h=el('button','hard',t('today.btnHard'));h.onclick=function(){commit('hard');};
+      acts.appendChild(g);acts.appendChild(h);
+    }else{
+      var cb=el('button','again',t('today.btnConfirmWrong'));cb.onclick=function(){commit('again');};
+      acts.appendChild(cb);
+    }
+    phase.appendChild(acts);
+  }
+  renderRecall();
+  return card;
+}
 
 // ---- stats (D6: realm number + error distribution + 14-day bar chart) ----
 function renderStats(){
