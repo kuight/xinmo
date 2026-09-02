@@ -942,16 +942,25 @@ function renderLibraryFilter(p){
       libData=d;
       if(!d.items||!d.items.length){list.appendChild(el('div','muted',t('library.empty')));return;}
       list.appendChild(el('div','muted',tpl(t('library.countTpl'),{n:d.items.length})));
-      // v1.4: group by subject, collapsible groups (reuses .td-row/.td-body accordion), default closed.
+      // v1.4/v1.7: group by subject then tag, collapsible groups, default closed.
       var groups={};
-      d.items.forEach(function(it){groups[it.subject]=(groups[it.subject]||[]).concat([it]);});
+      d.items.forEach(function(it){var g=groups[it.subject]||(groups[it.subject]={count:0,tags:{}});g.count++;var tg=it.topic_label||'#other';(g.tags[tg]=g.tags[tg]||[]).push(it);});
       SUBJ.forEach(function(s){
-        var arr=groups[s];if(!arr)return;
+        var g=groups[s];if(!g)return;
         var grp=el('div','td-row');
         var head=el('div','td-row-head');
-        head.appendChild(el('div','td-row-title',t('subjects.'+s,s)+' <span class="lib-grp-count">'+arr.length+'</span>'));
+        head.appendChild(el('div','td-row-title',t('subjects.'+s,s)+' <span class="lib-grp-count">'+g.count+'</span>'));
         var body=el('div','td-body');
-        arr.forEach(function(it){body.appendChild(buildLibraryCard(it));});
+        Object.keys(g.tags).forEach(function(tag){
+          var tagRow=el('div','td-row kentry-tagrow');
+          var tagHead=el('div','td-row-head');
+          tagHead.appendChild(el('div','td-row-title',escapeHtml(tag)+' <span class="lib-grp-count">'+g.tags[tag].length+'</span>'+tagStats(g.tags[tag])));
+          var tagBody=el('div','td-body');
+          g.tags[tag].forEach(function(it){tagBody.appendChild(buildLibraryCard(it));});
+          tagRow.appendChild(tagHead);tagRow.appendChild(tagBody);
+          tagHead.onclick=function(){tagRow.classList.toggle('open');};
+          body.appendChild(tagRow);
+        });
         grp.appendChild(head);grp.appendChild(body);
         head.onclick=function(){grp.classList.toggle('open');};
         list.appendChild(grp);
@@ -990,6 +999,9 @@ function buildLibraryCard(it){
   if(it.last_result){lastResTxt=' &middot; '+t('today.result'+it.last_result.charAt(0).toUpperCase()+it.last_result.slice(1),it.last_result);}
   card.appendChild(el('div','meta',tpl(t('library.attemptCountTpl'),{n:it.attempt_count||0})+lastResTxt));
   card.appendChild(el('div','meta',tpl(t('library.createdTpl'),{d:it.created_at||''})));
+  // v1.7: attempt history + memory curve
+  card.appendChild(historyBlock(it));
+  var mc=memoryCurve(it); if(mc)card.appendChild(mc);
   var editBtn=el('button','primary lib-edit',t('library.btnEdit'));
   editBtn.onclick=(function(card,it){return function(){openEditForm(card,it);};})(card,it);
   card.appendChild(editBtn);
@@ -1021,7 +1033,7 @@ function renderKEntry(){
       Object.keys(g.tags).forEach(function(tag){
         var tagRow=el('div','td-row kentry-tagrow');
         var tagHead=el('div','td-row-head');
-        tagHead.appendChild(el('div','td-row-title',escapeHtml(tag)+' <span class="lib-grp-count">'+g.tags[tag].length+'</span>'));
+        tagHead.appendChild(el('div','td-row-title',escapeHtml(tag)+' <span class="lib-grp-count">'+g.tags[tag].length+'</span>'+tagStats(g.tags[tag])));
         var tagBody=el('div','td-body');
         g.tags[tag].forEach(function(it){tagBody.appendChild(buildKEntryCard(it));});
         tagRow.appendChild(tagHead);tagRow.appendChild(tagBody);
@@ -1043,7 +1055,62 @@ function buildKEntryCard(it){
   meta.appendChild(el('span',null,t('kentry.due')+': '+(it.due_date||'')));
   meta.appendChild(el('span',null,t('kentry.interval')+': '+(it.interval_days||0)));
   card.appendChild(meta);
+  // v1.7: attempt history + memory curve
+  card.appendChild(historyBlock(it));
+  var mc=memoryCurve(it); if(mc)card.appendChild(mc);
   return card;
+}
+// v1.7: per-tag summary numbers (count / avg interval / error rate) appended to group titles
+function tagStats(items){
+  var n=items.length; if(!n)return '';
+  var avgI=0,total=0,bad=0;
+  items.forEach(function(it){
+    avgI+=(it.interval_days||0);
+    if(it.attempts)it.attempts.forEach(function(a){total++;if(a.result==='again'||a.result==='wont')bad++;});
+  });
+  var avg=(avgI/n).toFixed(1);
+  var err=total?(100*bad/total).toFixed(0):'0';
+  return ' <span class="tag-stats">'+t('library.tagTotal')+n+' · '+t('library.tagAvg')+avg+t('library.tagDay')+' · '+t('library.tagErr')+err+'%</span>';
+}
+function historyBlock(it){
+  var box=el('div','hist-block');
+  box.appendChild(el('div','hist-title',t('library.histTitle')));
+  if(!it.attempts||!it.attempts.length){box.appendChild(el('div','muted',t('library.histEmpty')));return box;}
+  var ul=el('ul','hist-list');
+  it.attempts.forEach(function(a){
+    var res=t('today.result'+a.result.charAt(0).toUpperCase()+a.result.slice(1),a.result);
+    var iv=a.interval_days!=null?a.interval_days:'—';
+    var st=a.streak!=null?a.streak:'—';
+    ul.appendChild(el('li',null,escapeHtml(a.ts)+' · '+res+' · '+t('library.histIv')+iv+' · '+t('library.histSk')+st));
+  });
+  box.appendChild(ul);
+  return box;
+}
+function memoryCurve(it){
+  var asc=(it.attempts||[]).slice().reverse();  // time asc
+  if(!asc.length)return null;
+  var d0=new Date(asc[0].ts.slice(0,10)).getTime();
+  var d1=it.due_date?new Date(it.due_date).getTime():d0+86400000;
+  var days=(d1-d0)/86400000; if(!(days>0))days=1;
+  var W=340,H=110,pad=12;
+  var x=function(day){return pad+(W-2*pad)*(Math.min(day,days)/days);};
+  var y=function(str){return pad+(H-2*pad)*(1-str/100);};
+  var pts=[],day=0;
+  asc.forEach(function(a){
+    var itv=a.interval_days; var nd=(itv&&itv>0)?itv:1;
+    var end=Math.min(day+nd,days);
+    pts.push([x(day),y(100),a.result]);  // review point: strength back to 100%
+    if(end>day)pts.push([x(end),y(50),null]);  // decays to 50% at next due
+    day=end;
+  });
+  var path='M'+pts[0][0].toFixed(1)+' '+pts[0][1].toFixed(1);
+  for(var i=1;i<pts.length;i++)path+=' L'+pts[i][0].toFixed(1)+' '+pts[i][1].toFixed(1);
+  var svg='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
+  svg+='<line x1="'+pad+'" y1="'+y(50).toFixed(1)+'" x2="'+(W-pad)+'" y2="'+y(50).toFixed(1)+'" stroke="#ccd4e0" stroke-dasharray="4 3"/>';
+  svg+='<path d="'+path+'" fill="none" stroke="#1d5fd6" stroke-width="2" stroke-linejoin="round"/>';
+  pts.forEach(function(p){ if(p[2]){ svg+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3.5" fill="#1d5fd6"><title>'+escapeHtml(p[2])+'</title></circle>'; } });
+  svg+='</svg>';
+  return el('div','mem-wrap',svg);
 }
 function openEditForm(card,it){
   var old=card.querySelector('.lib-editform');

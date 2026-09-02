@@ -88,6 +88,27 @@
 - CDP 实测：h1"今日题目 15 只"；上区进度"今日 15 只 · 已完成 13 只"（15 行）；下区 h2"今日条目 8 条"、进度"今日 8 条 · 已完成 0 条"（8 行）；知识卡片渲染正常；console 异常 0（仅资源 404 噪声）。
 - e2e 测试 PASSED（interval 序列 1/3/8.4/24.36 不变）；事务完整性 CLEAN；test_schedule_sim.py 解包同步为 4 元组并运行通过。
 
+## v1.7 - 单条目/单题统计：作答历史 + 记忆强度曲线 + tag 汇总三数字 (2026-09-02)
+
+### 后端（server.py）
+- attempt 表加两列快照（init_db try/except 迁移，老库兼容）：`interval_days REAL`、`streak INTEGER`。
+- POST /api/attempt：INSERT 移到排期计算之后，快照当次 commit 后的 interval_days/streak（历史 UI 展示"当时的间隔/连对"）。
+- /api/library 与 /api/kentry 每条 item 新增 `attempts` 数组（时间倒序：ts/result/judged/interval_days/streak），供历史区与曲线渲染。
+
+### 前端（web/app.js / i18n.json / style.css）
+- 卡片新增"作答历史"区（.hist-block）：时间倒序列出每次记录（时间、结果、当时的 interval/streak）；从未作答显示"尚未作答"。
+- 新增记忆强度曲线 memoryCurve()：内联 SVG，横轴首次作答日→下次到期日，纵轴强度 100%（每次作答）线性衰减至 50%（下次到期）；作答点标圆点，SVG title 悬停显示该次结果；无外部图表库/CDN。
+- tag 组标题新增三数字 tagStats()：总条目数 · 平均 interval_days（1 位小数）· 错误率（again/wont 次数占总作答次数）——条目库与错题库均有；错题库补 tag 二级分组（与条目库结构对齐）。
+- 缓存版本 bump ?v=20260907。
+
+### 验证（CDP，headless Chrome）
+- 实测 id 55 蒸馏连续作答 good→good→again（快照 1.0/1、3.0/2、0.0/0）后，条目库展开化学→分离提纯操作：
+  - 蒸馏卡片完整渲染：提示/答案/标签/下次到期 2026-09-03/间隔(天) 0 + 作答历史 3 条（时间倒序，最新"记错了 · 间隔0 · 连对0"在前）+ SVG 曲线（3 个作答点 circle）。
+  - tag 标题：`分离提纯操作 11 · 共11 · 均0.0天 · 错33%`。
+  - 未作答条目（游标卡尺）：显示"作答历史 / 尚未作答"。
+  - 错题库数学组 4 个 tag 标题均带三数字（如`离散型随机变量分布列 1 · 共1 · 均0.0天 · 错100%`）。
+- console 异常 0、JS exception 0（仅资源 404 噪声）；e2e PASSED（序列 1/3/8.4/24.36 不变）；事务完整性 CLEAN。
+
 ## v1.4.2 - wbapse 笔误确认（无代码缺陷）+ 题型映射全部落库 (2026-09-01)
 
 ### 结论

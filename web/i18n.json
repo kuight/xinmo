@@ -243,7 +243,15 @@
     "metaTpl": "状态：%s · 连对 %n 次 · 熟练度 %e · 间隔 %i 天 · 下次 %d",
     "brokenImage": "（当前图片缺失，可重新上传替换）",
     "replaceImage": "替换/上传",
-    "createdTpl": "录入于 %d"
+    "createdTpl": "录入于 %d",
+    "histTitle": "作答历史",
+    "histEmpty": "尚未作答",
+    "tagTotal": "共",
+    "tagAvg": "均",
+    "tagErr": "错",
+    "tagDay": "天",
+    "histIv": "间隔",
+    "histSk": "连对"
   },
   "kentry": {
     "title": "条目库",
@@ -252,6 +260,14 @@
     "right": "答案",
     "tag": "标签",
     "due": "下次到期",
-    "interval": "间隔(天)"
+    "interval": "间隔(天)",
+    "histTitle": "作答历史",
+    "histEmpty": "尚未作答",
+    "tagTotal": "共",
+    "tagAvg": "均",
+    "tagErr": "错",
+    "tagDay": "天",
+    "histIv": "间隔",
+    "histSk": "连对"
   }
 }

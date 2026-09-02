@@ -124,6 +124,15 @@ def init_db():
         conn.execute('ALTER TABLE problem ADD COLUMN kind TEXT DEFAULT \'problem\'')
     except sqlite3.OperationalError:
         pass  # column already exists
+    # v1.7: attempt snapshot columns - interval/streak at commit time (history + memory curve UI)
+    try:
+        conn.execute('ALTER TABLE attempt ADD COLUMN interval_days REAL')
+    except sqlite3.OperationalError:
+        pass  # column already exists
+    try:
+        conn.execute('ALTER TABLE attempt ADD COLUMN streak INTEGER')
+    except sqlite3.OperationalError:
+        pass  # column already exists
     conn.commit()
     conn.close()
 
@@ -512,6 +521,10 @@ def library(subject: str = '', state: str = '', q: str = ''):
         # image availability (so front-end can flag broken images)
         d['image_missing'] = bool(r['image_path']) and _local_image_path(r['image_path']) is None
         d['answer_image_missing'] = bool(r['answer_image_path']) and _local_image_path(r['answer_image_path']) is None
+        # v1.7: full attempt history, time desc (history panel + memory curve)
+        d['attempts'] = [dict(x) for x in conn.execute(
+            'SELECT ts, result, judged, interval_days, streak FROM attempt WHERE problem_id=? ORDER BY id DESC',
+            (r['id'],)).fetchall()]
         items.append(d)
     conn.close()
     return JSONResponse({'ok': True, 'items': items})
@@ -532,6 +545,10 @@ def kentry():
             (r['id'],)).fetchone()
         d['attempt_count'] = a['n']
         d['last_result'] = a['last_result']
+        # v1.7: full attempt history, time desc (history panel + memory curve)
+        d['attempts'] = [dict(x) for x in conn.execute(
+            'SELECT ts, result, judged, interval_days, streak FROM attempt WHERE problem_id=? ORDER BY id DESC',
+            (r['id'],)).fetchall()]
         items.append(d)
     conn.close()
     return JSONResponse({'ok': True, 'items': items})
@@ -731,9 +748,6 @@ async def attempt(payload: dict):
     today_s = sch.i2d(sch.days_today())
     n_today = conn.execute(
         "SELECT COUNT(*) FROM attempt WHERE problem_id=? AND substr(ts,1,10)=?", (pid, today_s)).fetchone()[0]
-    conn.execute(
-        'INSERT INTO attempt (problem_id, ts, my_answer, judged, result, seconds) VALUES (?,?,?,?,?,?)',
-        (pid, ts, my_answer, judged, result, seconds))
 
     p = row_to_sched(row)
     # v1.4: 'wont' (不会，先读解析) - standalone branch, schedule.py untouched.
@@ -755,6 +769,12 @@ async def attempt(payload: dict):
     if note_add:
         merged = (row['note'] or '') + ('\n' if row['note'] else '') + note_add
         conn.execute('UPDATE problem SET note=? WHERE id=?', (merged, pid))
+
+    # v1.7: snapshot interval/streak at commit time (after scheduling) for history/memory-curve UI
+    conn.execute(
+        'INSERT INTO attempt (problem_id, ts, my_answer, judged, result, seconds, interval_days, streak) '
+        'VALUES (?,?,?,?,?,?,?,?)',
+        (pid, ts, my_answer, judged, result, seconds, newp['interval_days'], newp['streak']))
 
     conn.execute(
         'UPDATE problem SET ease=?, interval_days=?, due_date=?, streak=?, state=? WHERE id=?',
