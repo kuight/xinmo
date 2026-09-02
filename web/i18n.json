@@ -186,7 +186,22 @@
     "dayLoading": "加载中…",
     "dayEmpty": "这一天没有动作",
     "dayMore": "共 %n 条",
-    "dayLoadFail": "加载失败"
+    "dayLoadFail": "加载失败",
+    "logTitle": "手动补录",
+    "logNoSubject": "选科目",
+    "logContentPh": "内容，如：指数函数练习册 P37-38，卡住 1 道",
+    "logMinutes": "分钟",
+    "logAdd": "添加",
+    "logContentReq": "请填写内容",
+    "todaySummaryTpl": "今日系统完成：题目 %p 道 · 条目 %k 条 · 手动补录 %m 分钟",
+    "logDayTpl": "%n 条 · 共 %m 分钟",
+    "logDelete": "删除",
+    "logLoadFailed": "补录加载失败",
+    "logCatPractice": "做练习",
+    "logCatReview": "分析试卷",
+    "logCatRecite": "背诵条目",
+    "logCatClass": "听课记录",
+    "logCatOther": "其他"
   },
   "stats": {
     "title": "统计",

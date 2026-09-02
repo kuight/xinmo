@@ -109,6 +109,30 @@
   - 错题库数学组 4 个 tag 标题均带三数字（如`离散型随机变量分布列 1 · 共1 · 均0.0天 · 错100%`）。
 - console 异常 0、JS exception 0（仅资源 404 噪声）；e2e PASSED（序列 1/3/8.4/24.36 不变）；事务完整性 CLEAN。
 
+## v1.8 - 足迹自填：log 表 + 每日补录表单 + 当日线上线下汇总 (2026-09-02)
+
+### 建表语句（改库前已备份 data/xinmo.db.bak-v18）
+```sql
+CREATE TABLE IF NOT EXISTS log (
+  id INTEGER PRIMARY KEY, day TEXT NOT NULL, category TEXT NOT NULL,
+  subject TEXT, content TEXT NOT NULL, minutes INTEGER, created_at TEXT NOT NULL);
+```
+
+### 后端（server.py）
+- 新建 log 表（不塞进 problem 表）；POST /api/log（日期默认今天、类别、科目、内容、耗时分钟可空）；GET /api/logs（按 day DESC, id DESC 返回，附带今日系统完成统计 problems/knowledge 与今日手动耗时）；DELETE /api/log/{id}。
+
+### 前端（web/app.js / i18n.json / style.css）
+- 足迹页顶部新增手动补录表单：日期（默认今天）、类别下拉（做练习/分析试卷/背诵条目/听课记录/其他）、科目下拉（五科）、内容、耗时分钟（可空）、添加按钮。
+- 补录列表：按日期倒序每天一块，块头显示当日总耗时与条数；块内按类别分行（科目 · 内容 · 分钟）；每行删除按钮（不做编辑）。
+- 当日汇总行：今日系统完成题目 N 道 · 条目 M 条（读 attempt 表按 kind 去重）· 手动补录 K 分钟，线上线下同页可见。
+- 缓存版本 bump ?v=20260907→20260908。
+
+### 验证（CDP，headless Chrome）
+- 实测补录 3 条不同类别（做练习/数学 40min、背诵条目/物理 20min、听课记录/化学 60min）后当日块：`2026-09-02 / 3 条 · 共 120 分钟 / 听课记录 / 化学 · 氧化还原反应课 1 小时 · 60min / 删除 / 背诵条目 / 物理 · 牛顿定律条目背 10 条 · 20min / 删除 / 做练习 / 数学 · 指数函数练习册 P37-38，卡住 1 道 · 40min / 删除`。
+- 删除"做练习"一条后：`2026-09-02 / 2 条 · 共 80 分钟`（剩余听课记录+背诵条目）；汇总行"今日系统完成：题目 6 道 · 条目 13 条 · 手动补录 120 分钟"。
+- select * from log 实际剩 2 行（id 2 recite / id 3 class，id 1 已被删除验证删除）。
+- console 异常 0（仅资源 404 噪声）；e2e PASSED（序列 1/3/8.4/24.36 不变）。
+
 ## v1.4.2 - wbapse 笔误确认（无代码缺陷）+ 题型映射全部落库 (2026-09-01)
 
 ### 结论

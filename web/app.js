@@ -773,6 +773,66 @@ function drawDailyChart(cv,daily){
 // ---- trace (D5): today list + knowledge tree + heatmap ----
 function renderTrace(){
   var p=document.getElementById('page-trace');p.innerHTML='';
+  // v1.8: manual study-log form + today summary + day-grouped list
+  var LOG_CATS=['practice','review','recite','class','other'];
+  function todayISO(){var d=new Date();var m=('0'+(d.getMonth()+1)).slice(-2);var dd=('0'+d.getDate()).slice(-2);return d.getFullYear()+'-'+m+'-'+dd;}
+  var secLog=el('div','trace-section log-form');
+  secLog.appendChild(el('h2',null,t('trace.logTitle')));
+  var form=el('div','log-form-row');
+  var dateInp=el('input');dateInp.type='date';dateInp.value=todayISO();
+  var catSel=el('select');
+  LOG_CATS.forEach(function(c){var o=el('option',null,t('trace.logCat'+c.charAt(0).toUpperCase()+c.slice(1),c));o.value=c;catSel.appendChild(o);});
+  var subjSel=el('select');
+  var o0=el('option',null,t('trace.logNoSubject'));o0.value='';subjSel.appendChild(o0);
+  SUBJ.forEach(function(s){var o=el('option',null,t('subjects.'+s,s));o.value=s;subjSel.appendChild(o);});
+  var contentInp=el('input');contentInp.type='text';contentInp.placeholder=t('trace.logContentPh');
+  var minInp=el('input');minInp.type='number';minInp.min='0';minInp.placeholder=t('trace.logMinutes');
+  var addBtn=el('button','primary',t('trace.logAdd'));
+  form.appendChild(dateInp);form.appendChild(catSel);form.appendChild(subjSel);form.appendChild(contentInp);form.appendChild(minInp);form.appendChild(addBtn);
+  secLog.appendChild(form);
+  var sumBox=el('div','log-today-sum');secLog.appendChild(sumBox);
+  p.appendChild(secLog);
+  function loadLogs(){
+    fetch('/api/logs').then(function(r){return r.json();}).then(function(d){
+      sumBox.textContent=tpl(t('trace.todaySummaryTpl'),{p:d.today.problems,k:d.today.knowledge,m:d.today.manual_minutes});
+      var oldList=p.querySelector('.log-list'); if(oldList)oldList.remove();
+      var days={};
+      d.items.forEach(function(it){(days[it.day]=days[it.day]||[]).push(it);});
+      var list=el('div','log-list');p.appendChild(list);
+      Object.keys(days).forEach(function(day){
+        var arr=days[day];
+        var total=arr.reduce(function(s,x){return s+(x.minutes||0);},0);
+        var block=el('div','log-day');
+        block.appendChild(el('div','log-day-head',escapeHtml(day)+' <span class="log-day-meta">'+tpl(t('trace.logDayTpl'),{n:arr.length,m:total})+'</span>'));
+        var cats={};
+        arr.forEach(function(it){(cats[it.category]=cats[it.category]||[]).push(it);});
+        Object.keys(cats).forEach(function(cat){
+          var sec=el('div','log-cat');
+          sec.appendChild(el('div','log-cat-name',t('trace.logCat'+cat.charAt(0).toUpperCase()+cat.slice(1),cat)));
+          cats[cat].forEach(function(it){
+            var row=el('div','log-item');
+            var txt=escapeHtml(it.subject?(t('subjects.'+it.subject,it.subject)+' · '):'')+escapeHtml(it.content)+(it.minutes?(' · '+it.minutes+'min'):'');
+            row.appendChild(el('span',null,txt));
+            var del=el('button','ghost log-del',t('trace.logDelete'));
+            del.onclick=(function(lid){return function(){fetch('/api/log/'+lid,{method:'DELETE'}).then(function(r){return r.json();}).then(function(dd){if(dd.ok){row.remove();loadLogs();}}).catch(function(){});};})(it.id);
+            row.appendChild(del);
+            sec.appendChild(row);
+          });
+          block.appendChild(sec);
+        });
+        list.appendChild(block);
+      });
+    }).catch(function(){sumBox.textContent=t('trace.logLoadFailed');});
+  }
+  addBtn.onclick=function(){
+    var body={day:dateInp.value, category:catSel.value, subject:subjSel.value, content:contentInp.value, minutes:minInp.value||null};
+    if(!(body.content||'').trim()){toast(t('trace.logContentReq'));return;}
+    fetch('/api/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){return r.json();}).then(function(d){if(d.ok){toast(t('entry.added')+' #'+d.log.id);contentInp.value='';minInp.value='';loadLogs();}else{toast('save failed');}})
+      .catch(function(){toast('save failed');});
+  };
+  loadLogs();
+  // existing sections
   fetch('/api/trace').then(function(r){return r.json();}).then(function(d){renderTraceData(p,d);}).catch(function(e){window.__traceErr=(e&&e.stack)||String(e);p.innerHTML='load failed';});
 }
 function renderTraceData(p,d){

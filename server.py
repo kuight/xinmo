@@ -809,6 +809,61 @@ def stats():
     })
 
 
+# ---------- log (v1.8: 足迹手动补录) ----------
+@app.post('/api/log')
+async def create_log(payload: dict):
+    day = payload.get('day') or sch.i2d(sch.days_today())
+    category = payload.get('category') or 'other'
+    subject = payload.get('subject') or ''
+    content = payload.get('content') or ''
+    minutes = payload.get('minutes')
+    if minutes is None or minutes == '':
+        minutes = None
+    else:
+        try:
+            minutes = int(minutes)
+        except (TypeError, ValueError):
+            minutes = None
+    if not (day and content.strip()):
+        return JSONResponse({'ok': False, 'error': 'day and content required'}, status_code=400)
+    conn = get_db()
+    cur = conn.execute(
+        'INSERT INTO log (day, category, subject, content, minutes, created_at) VALUES (?,?,?,?,?,?)',
+        (day, category, subject, content, minutes, now_iso()))
+    conn.commit()
+    row = conn.execute('SELECT * FROM log WHERE id=?', (cur.lastrowid,)).fetchone()
+    conn.close()
+    return JSONResponse({'ok': True, 'log': dict(row)})
+
+
+@app.get('/api/logs')
+def logs():
+    """Manual study log grouped by day desc. Plus today's in-app completion stats (problems/knowledge)."""
+    conn = get_db()
+    rows = conn.execute('SELECT * FROM log ORDER BY day DESC, id DESC').fetchall()
+    items = [dict(r) for r in rows]
+    today_s = sch.i2d(sch.days_today())
+    def done(kind):
+        return conn.execute(
+            'SELECT COUNT(DISTINCT a.problem_id) FROM attempt a JOIN problem p ON p.id=a.problem_id '
+            'WHERE substr(a.ts,1,10)=? AND p.kind=?', (today_s, kind)).fetchone()[0]
+    today_sum = conn.execute('SELECT COALESCE(SUM(minutes),0) FROM log WHERE day=?', (today_s,)).fetchone()[0]
+    res = {'ok': True, 'items': items,
+           'today': {'problems': done('problem'), 'knowledge': done('knowledge'),
+                     'manual_minutes': today_sum}}
+    conn.close()
+    return JSONResponse(res)
+
+
+@app.delete('/api/log/{lid}')
+def delete_log(lid: int):
+    conn = get_db()
+    conn.execute('DELETE FROM log WHERE id=?', (lid,))
+    conn.commit()
+    conn.close()
+    return JSONResponse({'ok': True})
+
+
 # ---------- trace (D5: today list + knowledge tree + heatmap) ----------
 @app.get('/api/trace')
 def trace():
