@@ -666,6 +666,25 @@ function buildKnowledgeCard(item){
         }else{toast('save failed');}
       }).catch(function(){toast('save failed');});
   }
+  // wont: read-only answer panel first; commit only on 读完了 (same flow as problem cards)
+  function renderWontPanel(){
+    phase.innerHTML='';
+    var ansTxt=(item.answer_text||'').trim();
+    var ansImgs=splitMulti(item.answer_image_path||'');
+    if(!ansTxt&&!ansImgs.length){
+      phase.appendChild(el('div','wont-empty',t('today.wontEmpty')));
+    }else{
+      var panel=el('div','wont-panel');
+      if(ansTxt){panel.appendChild(el('div','std-answer','<b>'+t('today.stdAnswer')+'</b>: '+escapeHtml(ansTxt)));}
+      if(ansImgs.length){renderImageStack(panel,item.answer_image_path);}
+      phase.appendChild(panel);
+    }
+    var acts=el('div','actions');
+    var done=el('button','primary',t('today.btnWontDone'));
+    done.onclick=function(){commit('wont');};
+    acts.appendChild(done);
+    phase.appendChild(acts);
+  }
   // phase 1: recall the right column from the left, then self-judge
   function renderRecall(){
     phase.innerHTML='';
@@ -673,7 +692,8 @@ function buildKnowledgeCard(item){
     var acts=el('div','actions');
     var g=el('button','good',t('today.selfCorrect'));g.onclick=function(){renderResult('good');};
     var w=el('button','again',t('today.selfWrong'));w.onclick=function(){renderResult('again');};
-    acts.appendChild(g);acts.appendChild(w);phase.appendChild(acts);
+    var wb=el('button','wont',t('today.btnWont'));wb.onclick=function(){renderWontPanel();};
+    acts.appendChild(g);acts.appendChild(w);acts.appendChild(wb);phase.appendChild(acts);
   }
   // phase 2: reveal the right column, pick the final result
   function renderResult(judge){
