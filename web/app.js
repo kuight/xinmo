@@ -55,7 +55,7 @@ function uploadImage(fileObj,kind,cb){
 
 // ---- tabs ----
 function renderTabs(){
-  var tabs=[['entry','entry'],['today','today'],['stats','stats'],['trace','trace'],['library','library'],['kentry','kentry'],['tree','tree']];
+  var tabs=[['entry','entry'],['today','today'],['stats','stats'],['trace','trace'],['library','library'],['kentry','kentry'],['tree','tree'],['starmap','starmap']];
   var box=document.getElementById('tabs');box.innerHTML='';
   tabs.forEach(function(pair){
     var b=el('button','tab'+(tab===pair[0]?' active':''),t('tabs.'+pair[1],pair[1]));
@@ -63,7 +63,7 @@ function renderTabs(){
     box.appendChild(b);
   });
 }
-function setTab(n){tab=n;renderTabs();['entry','today','stats','trace','library','kentry','tree'].forEach(function(x){document.getElementById('page-'+x).classList.toggle('active',x===n);});if(n==='entry')renderEntry();if(n==='today'){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;renderToday();}if(n==='stats')renderStats();if(n==='trace')renderTrace();if(n==='library')renderLibrary();if(n==='kentry')renderKEntry();if(n==='tree')renderTree();}
+function setTab(n){tab=n;renderTabs();['entry','today','stats','trace','library','kentry','tree','starmap'].forEach(function(x){document.getElementById('page-'+x).classList.toggle('active',x===n);});if(n==='entry')renderEntry();if(n==='today'){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;renderToday();}if(n==='stats')renderStats();if(n==='trace')renderTrace();if(n==='library')renderLibrary();if(n==='kentry')renderKEntry();if(n==='tree')renderTree();if(n==='starmap'){document.getElementById('page-starmap').innerHTML='';import('/web/starmap.js?v=20260912').then(function(m){m.renderStarmap();}).catch(function(){document.getElementById('page-starmap').innerHTML='<div class=\"muted\" style=\"padding:40px;text-align:center\">starmap load failed</div>';});}}
 
 function loadTopics(cb){if(TOPICS){cb();return;}fetch('/api/topics').then(function(r){return r.json();}).then(function(d){TOPICS=d;cb();}).catch(function(){toast('topics load failed');});}
 

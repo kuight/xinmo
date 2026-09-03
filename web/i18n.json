@@ -7,7 +7,8 @@
     "trace": "足迹",
     "library": "错题库",
     "kentry": "条目库",
-    "tree": "知识树"
+    "tree": "知识树",
+    "starmap": "星图"
   },
   "subjects": {
     "physics": "物理",
@@ -302,5 +303,12 @@
     "loadFailed": "知识树加载失败",
     "arrowsTpl": "前置箭头",
     "arrowLegend": "紫虚线=前置指向"
+  },
+  "starmap": {
+    "outside": "球外",
+    "inside": "球内",
+    "webglMissing": "WebGL 不可用，请使用支持 WebGL 的浏览器",
+    "goTree": "查看 2D 知识树",
+    "counter": "已亮 %d / 65"
   }
 }

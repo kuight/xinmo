@@ -237,3 +237,13 @@ img.thumb{max-width:120px;max-height:90px;border-radius:6px;border:1px solid #dd
 /* v1.10 step2: prerequisite arrows + 先看前置 warning */
 .prereq-warn{display:inline-block;margin-left:8px;font-size:11px;color:#8a5ae0;background:#f0e9ff;border:1px dashed #8a5ae0;border-radius:8px;padding:1px 8px;vertical-align:middle}
 .prereq-arrow{stroke:#8a5ae0;stroke-width:1.5;stroke-dasharray:4 3}
+
+/* v1.11: 3D starmap */
+#page-starmap{width:100%;height:calc(100vh - 52px);overflow:hidden;position:relative}
+.starmap-container{width:100%;height:100%;position:relative}
+.starmap-container canvas{display:block}
+.starmap-counter{position:absolute;top:10px;left:14px;font-size:13px;color:#8899bb;z-index:2;text-shadow:0 0 4px rgba(0,0,0,.6)}
+.starmap-toggle{position:absolute;bottom:16px;right:16px;z-index:2;padding:6px 16px;border-radius:8px;border:1px solid #556688;background:rgba(10,10,20,.7);color:#99aabb;font-size:13px;cursor:pointer}
+.starmap-toggle:hover{background:rgba(20,20,40,.85);color:#ccd}
+.starmap-hover{position:absolute;z-index:3;pointer-events:none;font-size:12px;color:#dde;background:rgba(10,10,20,.85);padding:3px 8px;border-radius:6px;border:1px solid #334466;white-space:nowrap;text-shadow:0 0 3px rgba(0,0,0,.5)}
+#page-starmap .tree-pop{position:absolute;left:50%;top:30%;transform:translateX(-50%);z-index:10}
