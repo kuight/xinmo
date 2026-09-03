@@ -429,10 +429,18 @@ function todayProgressRefresh(section){  // v1.6: section = 'problem' | 'knowled
   pg.textContent=tpl(t(section==='problem'?'today.progressTpl':'today.kProgressTpl'),{n:n,m:m});
 }
 
+// v1.10.2: "done" means attempted TODAY (server date from /api/today top-level date),
+// not merely "has any last_attempt" (which counts any historical day). Shared by both
+// progress counters and row badges so the two never diverge.
+function isDoneToday(item, todayDate){
+  return !!(item.done || (item.last_attempt && item.last_attempt.result
+            && item.last_attempt.ts && item.last_attempt.ts.slice(0,10) === todayDate));
+}
+
 function renderTodayData(p,d){
-  var queue=d.queue||[]; var kqueue=d.kqueue||[];
-  todayTotalP=queue.length; todayDoneP=queue.filter(function(it){return !!(it.last_attempt&&it.last_attempt.result);}).length;
-  todayTotalK=kqueue.length; todayDoneK=kqueue.filter(function(it){return !!(it.last_attempt&&it.last_attempt.result);}).length;
+  var queue=d.queue||[]; var kqueue=d.kqueue||[]; var todayDate=d.date||'';
+  todayTotalP=queue.length; todayDoneP=queue.filter(function(it){return isDoneToday(it,todayDate);}).length;
+  todayTotalK=kqueue.length; todayDoneK=kqueue.filter(function(it){return isDoneToday(it,todayDate);}).length;
   p.innerHTML='';
   p.appendChild(el('h1',null,t('today.title')+' '+todayTotalP+' '+t('today.unit')));
   if(d.on_the_way>0){p.appendChild(el('div','banner',t('today.onTheWay').replace('%d',d.on_the_way)));}
@@ -440,13 +448,13 @@ function renderTodayData(p,d){
   // v1.6: two sections - problems on top, knowledge items below, each with its own progress line
   var secP=el('div','today-section');p.appendChild(secP);
   secP.appendChild(el('div','today-progress problem',tpl(t('today.progressTpl'),{n:todayTotalP,m:todayDoneP})));
-  queue.forEach(function(item,idx){secP.appendChild(buildCollapsibleRow(item,idx));});
+  queue.forEach(function(item,idx){secP.appendChild(buildCollapsibleRow(item,idx,todayDate));});
   var secK=el('div','today-section');p.appendChild(secK);
   secK.appendChild(el('h2',null,t('today.kTitle')+' '+todayTotalK+' '+t('today.kUnit')));
   secK.appendChild(el('div','today-progress knowledge',tpl(t('today.kProgressTpl'),{n:todayTotalK,m:todayDoneK})));
-  kqueue.forEach(function(item,idx){secK.appendChild(buildCollapsibleRow(item,idx));});
+  kqueue.forEach(function(item,idx){secK.appendChild(buildCollapsibleRow(item,idx,todayDate));});
 }
-function buildCollapsibleRow(item,idx){
+function buildCollapsibleRow(item,idx,todayDate){
   var row=el('div','td-row');
   var head=el('div','td-row-head');
   var titleText=(item.row_kind==='knowledge')?(item.note||item.topic_label):(splitMulti(item.topic_label).join('、')||item.source||('#'+item.id));
@@ -459,7 +467,7 @@ function buildCollapsibleRow(item,idx){
     line+=' <span class="prereq-warn">'+t('today.prereqWarn')+': '+escapeHtml(item.prereq_unmastered.join('、'))+'</span>';
   }
   head.appendChild(el('div','td-row-title',line));
-  var done=item.done||(item.last_attempt&&item.last_attempt.result)?true:false;
+  var done=isDoneToday(item,todayDate);
   var badge=el('span','td-badge '+(done?'done':'todo'),done?t('today.statusDone'):t('today.statusTodo'));
   head.appendChild(badge);
   row.appendChild(head);
