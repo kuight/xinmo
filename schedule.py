@@ -119,8 +119,12 @@ def build_today(problems, today_days, done_today=None):
         queue = []
         seen = set()
         undone_cap = max(0, cap - sum(1 for p in plist if p['id'] in done_today))
+        # v1.10.4 hole2 fix: check the quota BEFORE appending so undone_cap==0
+        # never lets an extra row slip in (first loop iteration breaks with queue empty).
         for bucket_key in ['rebound', 'overdue', 'due', 'new']:
             for p in buckets[bucket_key]:
+                if len(queue) >= undone_cap:
+                    break
                 pid = p['id']
                 if pid in seen:
                     continue
@@ -129,17 +133,28 @@ def build_today(problems, today_days, done_today=None):
                 item['kind'] = bucket_key
                 item['done_today'] = False
                 queue.append(item)
-                if len(queue) >= undone_cap:
-                    break
             if len(queue) >= undone_cap:
                 break
-        # v1.10.3: items done today stay, appended at the end (past the cap)
+        # v1.10.4 hole1 fix: dedupe done_today against seen - an item already picked
+        # from a bucket (e.g. again today: interval=0/due=today lands in 'new') must not
+        # appear twice; flip its flags in place and move it to the end instead.
         for p in plist:
             if p['id'] in done_today:
-                item = dict(p)
-                item['kind'] = 'done_today'
-                item['done_today'] = True
-                queue.append(item)
+                pid = p['id']
+                if pid in seen:
+                    for i, it in enumerate(queue):
+                        if it['id'] == pid:
+                            it['done_today'] = True
+                            it['kind'] = 'done_today'
+                            queue.pop(i)
+                            queue.append(it)
+                            break
+                else:
+                    seen.add(pid)
+                    item = dict(p)
+                    item['kind'] = 'done_today'
+                    item['done_today'] = True
+                    queue.append(item)
         return queue, rebound, on_the_way
 
     q_queue, q_rebound, q_otw = build(problems_l, QUEUE_CAP)
