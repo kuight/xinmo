@@ -74,7 +74,7 @@ def apply_rebound_penalties(problems, today_days):
     return count
 
 
-def build_today(problems, today_days):
+def build_today(problems, today_days, done_today=None):
     """Build today's queue.
 
     Returns (queue, kqueue, rebound_list, on_the_way).
@@ -86,8 +86,15 @@ def build_today(problems, today_days):
     slots and vice versa; overflow on either side just waits for the next day
     (it becomes overdue and re-enters its own queue). Bucket key ('rebound'/
     'overdue'/'due'/'new') is stored on each item as item['kind'] for the UI.
+
+    v1.10.3: done_today is a set of problem ids that have an attempt today.
+    Items done today stay in their queue unconditionally (beyond the cap) and
+    are appended at the end; the cap counts only the not-done items, so
+    finishing an item no longer makes it vanish from the today page.
+    Each queued item carries item['done_today'] (bool) for the frontend.
     """
     import random
+    done_today = done_today or set()
     active = [p for p in problems if p.get('state') == 'active']
     problems_l = [p for p in active if p.get('row_kind') != 'knowledge']
     knowledge_l = [p for p in active if p.get('row_kind') == 'knowledge']
@@ -102,14 +109,16 @@ def build_today(problems, today_days):
             for p in excess:
                 p['due_date'] = today_days + random.randint(2, 5)
             on_the_way = len(excess)
+        undone = [p for p in plist if p['id'] not in done_today]
         buckets = {
-            'rebound': rebound,
-            'overdue': [p for p in plist if p['due_date'] < today_days and not is_rebound(p, today_days)],
-            'due': [p for p in plist if p['due_date'] == today_days and p['interval_days'] > 0],
-            'new': [p for p in plist if p['due_date'] == today_days and p['interval_days'] == 0],
+            'rebound': [p for p in rebound if p['id'] not in done_today],
+            'overdue': [p for p in undone if p['due_date'] < today_days and not is_rebound(p, today_days)],
+            'due': [p for p in undone if p['due_date'] == today_days and p['interval_days'] > 0],
+            'new': [p for p in undone if p['due_date'] == today_days and p['interval_days'] == 0],
         }
         queue = []
         seen = set()
+        undone_cap = max(0, cap - sum(1 for p in plist if p['id'] in done_today))
         for bucket_key in ['rebound', 'overdue', 'due', 'new']:
             for p in buckets[bucket_key]:
                 pid = p['id']
@@ -118,9 +127,19 @@ def build_today(problems, today_days):
                 seen.add(pid)
                 item = dict(p)
                 item['kind'] = bucket_key
+                item['done_today'] = False
                 queue.append(item)
-                if len(queue) >= cap:
-                    return queue, rebound, on_the_way
+                if len(queue) >= undone_cap:
+                    break
+            if len(queue) >= undone_cap:
+                break
+        # v1.10.3: items done today stay, appended at the end (past the cap)
+        for p in plist:
+            if p['id'] in done_today:
+                item = dict(p)
+                item['kind'] = 'done_today'
+                item['done_today'] = True
+                queue.append(item)
         return queue, rebound, on_the_way
 
     q_queue, q_rebound, q_otw = build(problems_l, QUEUE_CAP)

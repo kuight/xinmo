@@ -678,7 +678,11 @@ def today():
             conn.execute('UPDATE problem SET rebound_at=?, ease=?, interval_days=?, due_date=? WHERE id=?',
                          (sch.i2d(p['rebound_at']), p['ease'], p['interval_days'], sch.i2d(p['due_date']), p['id']))
     conn.commit()
-    queue, kqueue, rebound_list, on_the_way = sch.build_today(problems, today_i)
+    # v1.10.3: ids attempted today stay in today's queue (beyond cap), appended at end
+    today_s = sch.i2d(today_i)
+    done_rows = conn.execute("SELECT DISTINCT problem_id FROM attempt WHERE substr(ts,1,10)=?", (today_s,)).fetchall()
+    done_today = set(r[0] for r in done_rows)
+    queue, kqueue, rebound_list, on_the_way = sch.build_today(problems, today_i, done_today)
 
     def enrich(item):
         d = sched_to_json(item)
